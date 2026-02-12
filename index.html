@@ -5,7 +5,7 @@
     <title>מרכז השיעורים - קול הלשון</title>
     <style>
         :root { --primary: #1a3a5f; --secondary: #28a745; --bg: #f1f3f6; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; text-align: right; }
         .container { max-width: 900px; margin: auto; }
         #player-box { position: sticky; top: 10px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); z-index: 1000; margin-bottom: 20px; display: none; text-align: center; }
         video { width: 100%; max-height: 350px; border-radius: 8px; background: #000; }
@@ -14,12 +14,10 @@
         .tab-btn.active { background: var(--primary); color: white; }
         .quick-ravs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding: 5px; }
         .rav-chip { background: #dee2e6; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; white-space: nowrap; border: 1px solid #ced4da; }
-        .search-container { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; gap: 10px; }
-        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
         .item-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-right: 5px solid var(--primary); }
         .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-play { background: var(--secondary); color: white; }
-        #status { text-align: center; padding: 20px; color: #666; font-weight: bold; }
+        #status { text-align: center; padding: 20px; color: #666; font-weight: bold; border: 1px dashed #ccc; margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -38,88 +36,99 @@
         <div class="rav-chip" onclick="loadRav(1116)">🔯 האדמו"ר מביאלא</div>
         <div class="rav-chip" onclick="loadRav(4746)">📜 הרב יצחק רצאבי</div>
     </div>
-    <div id="search-section" class="search-container">
-        <input type="text" id="search-query" placeholder="הקלד שם רב...">
+    <div id="search-section" style="display:none; margin-bottom:20px;">
+        <input type="text" id="search-query" style="width:70%; padding:10px;" placeholder="שם הרב...">
         <button class="btn btn-play" onclick="searchRavs()">חפש</button>
     </div>
-    <div id="status">טוען נתונים מקול הלשון...</div>
+    <div id="status">יוזם חיבור ראשוני...</div>
     <div id="content-list"></div>
 </div>
 
 <script>
-    // פונקציית הקסם שעוקפת CORS בנטפרי - JSONP
-    function jsonpRequest(url, callbackName) {
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            const name = "callback_" + Math.round(100000 * Math.random());
-            window[name] = function(data) {
-                resolve(data);
-                document.body.removeChild(script);
-                delete window[name];
-            };
-            script.src = `${url}${url.includes('?') ? '&' : '?'}callback=${name}`;
-            script.onerror = () => reject();
-            document.body.appendChild(script);
-        });
+    // הגדרה גלובלית לטיפול בנתונים שחוזרים
+    window.handleData = function(data) {
+        console.log("Data received:", data);
+        render(data);
+    };
+
+    function callApi(endpoint) {
+        console.log("Calling endpoint:", endpoint);
+        document.getElementById('status').innerText = "שולח בקשה לקול הלשון...";
+        
+        // הסרת סקריפטים קודמים כדי לא להעמיס
+        const oldScript = document.getElementById('jsonp-script');
+        if (oldScript) oldScript.remove();
+
+        const script = document.createElement('script');
+        script.id = 'jsonp-script';
+        // הוספת Timestamp כדי למנוע שמירה בזיכרון (Cache)
+        const url = `https://www.kolhalashon.com/api/${endpoint}${endpoint.includes('?') ? '&' : '?'}callback=handleData&_=${Date.now()}`;
+        script.src = url;
+        
+        script.onerror = function() {
+            console.error("Script failed to load");
+            document.getElementById('status').innerText = "שגיאה: האתר חסום או שאין חיבור.";
+        };
+
+        document.body.appendChild(script);
     }
 
-    const API_URL = "https://www.kolhalashon.com/api/";
-
-    async function changeTab(mode, btn) {
+    function changeTab(mode, btn) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        document.getElementById('search-section').style.display = (mode === 'search') ? 'flex' : 'none';
+        document.getElementById('search-section').style.display = (mode === 'search') ? 'block' : 'none';
         if (mode === 'live') loadLive();
     }
 
-    async function loadLive() {
-        document.getElementById('status').innerText = "טוען שידורים חיים...";
-        // שינוי לפורמט JSONP
-        const data = await jsonpRequest(API_URL + "LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1");
-        render(data);
+    function loadLive() {
+        callApi("LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1");
     }
 
-    async function searchRavs() {
+    function searchRavs() {
         const q = document.getElementById('search-query').value;
-        document.getElementById('status').innerText = "מחפש...";
-        const data = await jsonpRequest(API_URL + "Ravs/WebSite_GetRavs/1/" + encodeURIComponent(q));
-        const list = document.getElementById('content-list');
-        list.innerHTML = '';
-        data?.forEach(rav => {
-            const d = document.createElement('div');
-            d.className = 'item-card';
-            d.innerHTML = `<span>${rav.RavName}</span><button class="btn btn-play" onclick="loadRav(${rav.RavId})">שיעורים</button>`;
-            list.appendChild(d);
-        });
-        document.getElementById('status').innerText = "";
+        callApi("Ravs/WebSite_GetRavs/1/" + encodeURIComponent(q));
     }
 
-    async function loadRav(id) {
-        document.getElementById('status').innerText = "טוען שיעורים...";
-        const data = await jsonpRequest(API_URL + `Ravs/WebSite_GetRavShiurim/${id}/0/50/1/-1`);
-        render(data);
+    function loadRav(id) {
+        callApi(`Ravs/WebSite_GetRavShiurim/${id}/0/50/1/-1`);
     }
 
     function render(items) {
         const list = document.getElementById('content-list');
         list.innerHTML = '';
         document.getElementById('status').innerText = "";
-        items?.forEach(item => {
-            const title = item.Title || item.ShiurTitle;
+        
+        if (!items || items.length === 0) {
+            document.getElementById('status').innerText = "לא נמצאו נתונים.";
+            return;
+        }
+
+        items.forEach(item => {
+            const title = item.Title || item.ShiurTitle || "שיעור";
+            const id = item.ShiurId || item.FileId;
             const card = document.createElement('div');
             card.className = 'item-card';
-            card.innerHTML = `<span>${title}</span><button class="btn btn-play" onclick="play('${item.ShiurId || item.FileId}', '${title}')">▶ נגן</button>`;
+            card.innerHTML = `
+                <span>${title}</span>
+                <button class="btn btn-play" onclick="playMedia('${id}', '${title}')">▶ נגן</button>
+            `;
             list.appendChild(card);
         });
     }
 
-    async function play(id, title) {
-        const res = await jsonpRequest(API_URL + "files/getLocationOfFileToVideo/" + id);
-        const player = document.getElementById('main-video');
-        document.getElementById('player-box').style.display = 'block';
-        document.getElementById('playing-now').innerText = title;
-        player.src = res.url || res;
-        window.scrollTo(0,0);
+    function playMedia(id, title) {
+        window.handlePlayerData = function(res) {
+            const url = res.url || res;
+            const player = document.getElementById('main-video');
+            document.getElementById('player-box').style.display = 'block';
+            document.getElementById('playing-now').innerText = title;
+            player.src = url;
+            window.scrollTo(0,0);
+        };
+        
+        const script = document.createElement('script');
+        script.src = `https://www.kolhalashon.com/api/files/getLocationOfFileToVideo/${id}?callback=handlePlayerData`;
+        document.body.appendChild(script);
     }
 
     function closePlayer() {
@@ -127,7 +136,8 @@
         document.getElementById('main-video').pause();
     }
 
-    loadLive();
+    // הפעלה אוטומטית בטעינה
+    window.onload = loadLive;
 </script>
 </body>
 </html>
