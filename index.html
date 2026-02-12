@@ -2,86 +2,123 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>מרכז השיעורים</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>נגן קול הלשון</title>
     <style>
-        :root { --primary: #1a3a5f; --secondary: #28a745; --bg: #f1f3f6; }
-        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 20px; direction: rtl; }
-        .container { max-width: 800px; margin: auto; }
-        .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .btn { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; background: var(--secondary); color: white; font-weight: bold; }
-        #player { display: none; background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        video { width: 100%; border-radius: 4px; background: #000; }
-        input { padding: 10px; width: 200px; border: 1px solid #ccc; border-radius: 4px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f9; margin: 0; padding: 20px; direction: rtl; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        input { flex-grow: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; transition: 0.3s; }
+        .btn-search { background: #007bff; color: white; }
+        .btn-live { background: #dc3545; color: white; }
+        #player-section { display: none; margin-bottom: 20px; background: #000; padding: 10px; border-radius: 8px; }
+        video { width: 100%; border-radius: 4px; }
+        .item-card { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; transition: 0.2s; }
+        .item-card:hover { background: #f9f9f9; }
+        .item-title { font-size: 15px; color: #333; flex-grow: 1; }
+        .play-link { color: #28a745; cursor: pointer; font-weight: bold; text-decoration: none; }
+        #status { color: #666; font-size: 14px; margin: 10px 0; }
     </style>
 </head>
 <body>
+
 <div class="container">
-    <div id="player">
-        <div id="title" style="margin-bottom:10px; font-weight:bold;"></div>
-        <video id="v" controls autoplay></video>
-        <button onclick="document.getElementById('player').style.display='none'; document.getElementById('v').pause();" style="margin-top:10px;">סגור</button>
+    <div id="player-section">
+        <div id="now-playing" style="color:white; margin-bottom:5px; font-size:12px;"></div>
+        <video id="video-player" controls autoplay></video>
+        <button onclick="closePlayer()" style="width:100%; margin-top:5px; background:#444; color:white;">סגור נגן</button>
     </div>
 
-    <div style="margin-bottom:20px;">
-        <button onclick="load('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1')">🔴 שידורים חיים</button>
-        <input type="text" id="q" placeholder="שם רב...">
-        <button onclick="search()">חפש</button>
+    <div class="header">
+        <button class="btn-live" onclick="loadLive()">🔴 שידורים חיים</button>
+        <input type="text" id="search-input" placeholder="חפש רב או שיעור...">
+        <button class="btn-search" onclick="search()">חפש</button>
     </div>
 
-    <div id="st">טוען...</div>
-    <div id="list"></div>
+    <div id="status">טוען נתונים...</div>
+    <div id="results-list"></div>
 </div>
 
 <script>
-    // הכתובת היחסית של ה-API שלך בורסל
-    const PROXY = "/api/proxy?endpoint=";
+    const PROXY_URL = "/api/proxy?endpoint=";
 
-    async function call(url) {
-        document.getElementById('st').innerText = "טוען נתונים...";
+    async function apiRequest(endpoint) {
+        const status = document.getElementById('status');
+        status.innerText = "מתחבר לשרת...";
         try {
-            const r = await fetch(PROXY + encodeURIComponent(url));
-            const d = await r.json();
-            document.getElementById('st').innerText = "";
-            return d;
+            const response = await fetch(PROXY_URL + encodeURIComponent(endpoint));
+            const data = await response.json();
+            if (data.error) throw new Error(data.details || data.error);
+            status.innerText = "";
+            return data;
         } catch (e) {
-            document.getElementById('st').innerText = "שגיאה בחיבור. וודא שנטפרי אישרו את הדומיין של ורסל.";
+            status.innerText = "שגיאה: " + e.message;
+            console.error(e);
             return null;
         }
     }
 
-    async function load(url) {
-        const d = await call(url);
-        const l = document.getElementById('list');
-        l.innerHTML = '';
-        d?.forEach(i => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            const title = i.Title || i.ShiurTitle || i.RavName;
-            div.innerHTML = `<span>${title}</span><button class="btn" onclick="play('${i.ShiurId || i.FileId || i.RavId}', '${title}', ${!!i.RavId && !i.ShiurId})">${i.RavId && !i.ShiurId ? 'הצג שיעורים' : '▶ נגן'}</button>`;
-            l.appendChild(div);
-        });
+    async function loadLive() {
+        const data = await apiRequest("LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1");
+        renderResults(data);
     }
 
     async function search() {
-        const query = document.getElementById('q').value;
-        load(`Ravs/WebSite_GetRavs/1/${encodeURIComponent(query)}`);
+        const q = document.getElementById('search-input').value;
+        if (!q) return;
+        const data = await apiRequest("Ravs/WebSite_GetRavs/1/" + encodeURIComponent(q));
+        renderResults(data, true);
     }
 
-    async function play(id, title, isRav) {
-        if (isRav) {
-            load(`Ravs/WebSite_GetRavShiurim/${id}/0/50/1/-1`);
+    async function loadRav(id) {
+        const data = await apiRequest(`Ravs/WebSite_GetRavShiurim/${id}/0/50/1/-1`);
+        renderResults(data);
+    }
+
+    function renderResults(items, isRavList = false) {
+        const list = document.getElementById('results-list');
+        list.innerHTML = '';
+        if (!items || items.length === 0) {
+            document.getElementById('status').innerText = "לא נמצאו תוצאות.";
             return;
         }
-        const r = await call("files/getLocationOfFileToVideo/" + id);
-        if (r) {
-            document.getElementById('player').style.display = 'block';
-            document.getElementById('title').innerText = title;
-            document.getElementById('v').src = r.url || r;
-            window.scrollTo(0,0);
+
+        items.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'item-card';
+            const title = item.Title || item.ShiurTitle || item.RavName;
+            const id = item.ShiurId || item.FileId || item.RavId;
+            
+            div.innerHTML = `
+                <span class="item-title">${title}</span>
+                <span class="play-link" onclick="${isRavList ? `loadRav(${id})` : `playMedia('${id}', '${title.replace(/'/g, "\\'")}')`}">
+                    ${isRavList ? 'הצג שיעורים ←' : '▶ נגן'}
+                </span>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    async function playMedia(id, title) {
+        const data = await apiRequest("files/getLocationOfFileToVideo/" + id);
+        if (data) {
+            const playerSection = document.getElementById('player-section');
+            const video = document.getElementById('video-player');
+            document.getElementById('now-playing').innerText = "מנגן כעת: " + title;
+            playerSection.style.display = 'block';
+            video.src = data.url || data;
+            window.scrollTo({top: 0, behavior: 'smooth'});
         }
     }
 
-    load('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1');
+    function closePlayer() {
+        document.getElementById('player-section').style.display = 'none';
+        document.getElementById('video-player').pause();
+    }
+
+    // טעינה ראשונית
+    loadLive();
 </script>
 </body>
 </html>
