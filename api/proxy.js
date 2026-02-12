@@ -1,15 +1,19 @@
 export default async function handler(req, res) {
     const { endpoint } = req.query;
-    const apiUrl = `https://www.kolhalashon.com/api/${endpoint}`;
+    
+    // הכתובת המלאה של קול הלשון
+    const targetUrl = `https://www.kolhalashon.com/api/${endpoint}`;
 
     try {
-        const response = await fetch(apiUrl);
+        const response = await fetch(targetUrl);
         const data = await response.json();
-        
-        // הגדרת כותרות שמאפשרות לדף ה-HTML שלך לקרוא את הנתונים
+
+        // מאפשר לדפדפן לקבל את המידע בלי חסימת CORS
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.status(200).json(data);
+        res.setHeader('Content-Type', 'application/json');
+        
+        return res.status(200).json(data);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch data' });
+        return res.status(500).json({ error: 'שגיאה במשיכת נתונים' });
     }
 }
