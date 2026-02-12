@@ -2,101 +2,122 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>מרכז שיעורי תורה</title>
+    <title>מרכז שידורי תורה</title>
     <style>
-        body { margin: 0; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #000; color: white; overflow: hidden; }
+        body { margin: 0; font-family: system-ui, sans-serif; display: flex; height: 100vh; background: #1a1a1b; color: white; overflow: hidden; }
         
         /* תפריט צד */
-        .sidebar { width: 320px; background: #1a1a1b; border-left: 1px solid #333; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 15px; background: #d93025; font-size: 1.2rem; font-weight: bold; text-align: center; }
-        .instructions { padding: 15px; background: #333; font-size: 0.9rem; line-height: 1.4; border-bottom: 1px solid #444; }
-        
+        .sidebar { width: 350px; background: #272729; border-left: 1px solid #3e3e42; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; background: #1a73e8; font-size: 1.2rem; font-weight: bold; text-align: center; }
         #live-list { flex: 1; overflow-y: auto; padding: 15px; }
         
-        /* אזור הנגן - כיול לפי התיקונים שלך */
-        .main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        
-        .clipper {
-            width: 1020px; /* רחב מספיק */
-            height: 580px; /* עמוק מספיק */
-            overflow: hidden; 
-            position: relative;
-            background: #111;
-            border-radius: 12px;
-            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+        /* עיצוב רשימת הרבנים */
+        .rav-item { 
+            background: #333; margin-bottom: 12px; padding: 15px; border-radius: 8px; 
+            border: 1px solid #444; display: flex; justify-content: space-between; align-items: center;
         }
+        .rav-info { flex: 1; margin-left: 10px; }
+        .rav-name { font-weight: bold; color: #fff; display: block; margin-bottom: 4px; }
+        .rav-topic { font-size: 0.85rem; color: #aaa; }
+        
+        .btn-play { 
+            background: #28a745; color: white; border: none; padding: 8px 15px; 
+            border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s;
+        }
+        .btn-play:hover { background: #218838; }
 
+        /* אזור הנגן - הכיול המדויק שלך */
+        .main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #000; }
+        .clipper {
+            width: 1020px; height: 580px; overflow: hidden; position: relative;
+            background: #000; border-radius: 12px; box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
         iframe {
             width: 1800px; height: 2000px; position: absolute;
-            top: -85px;    /* עלה קצת למעלה */
-            right: -385px; /* זז חזק ימינה (להסתיר הכל משמאל) */
+            top: -85px;    /* פחות מלמעלה */
+            right: -385px; /* יותר ימינה - להסתיר הכל משמאל */
             border: none;
         }
 
-        .controls { margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
-        
-        .btn-live { 
-            background: #0095ff; color: white; border: none; padding: 12px 25px; 
-            border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%;
-        }
+        .bottom-bar { margin-top: 15px; display: flex; gap: 20px; align-items: center; }
         .btn-fullscreen { 
-            background: #d93025; color: white; border: none; padding: 12px 40px; 
-            border-radius: 50px; cursor: pointer; font-weight: bold; font-size: 1.1rem;
+            background: #d93025; color: white; border: none; padding: 10px 25px; 
+            border-radius: 30px; cursor: pointer; font-weight: bold;
         }
-        
-        input { padding: 10px; width: 150px; border-radius: 5px; border: none; text-align: center; font-size: 1rem; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div class="sidebar-header">🔴 שידורים חיים</div>
-    <div class="instructions">
-        <b>איך מפעילים?</b><br>
-        1. לחץ על הכפתור הכחול למטה.<br>
-        2. העתק את ה-<b>FileId</b> של השיעור.<br>
-        3. הדבק בתיבה ולחץ "נגן".
-    </div>
-    <div id="live-list">
-        <button class="btn-live" onclick="window.open('https://www.kolhalashon.com/api/LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1', '_blank')">
-            🔍 פתח רשימת שידורים
-        </button>
-        <div style="margin-top:20px; text-align:center;">
-            <input type="number" id="idInput" placeholder="הכנס FileId כאן">
-            <button onclick="loadId()" style="margin-top:10px; padding:10px 30px; background:green; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">▶ נגן שיעור</button>
-        </div>
-        <hr style="margin:20px 0; border-color:#444;">
-        <div onclick="play('42199358', 'סדר המחשבת')" style="padding:10px; background:#222; cursor:pointer; border-radius:5px;">סדר המחשבת (דוגמה)</div>
-    </div>
+    <div class="sidebar-header">🔴 שידורים חיים כרגע</div>
+    <div id="live-list">טוען רשימת רבנים...</div>
 </div>
 
 <div class="main">
-    <div class="clipper" id="vidBox">
+    <div class="clipper" id="player-container">
         <iframe id="player" src="about:blank" allowfullscreen allow="autoplay; fullscreen"></iframe>
     </div>
-    
-    <div class="controls">
-        <div id="title">ממתין לבחירת שיעור...</div>
-        <button class="btn-fullscreen" onclick="goFull()">📺 הגדל למסך מלא</button>
+    <div class="bottom-bar">
+        <div id="current-playing">בחר שיעור מהרשימה</div>
+        <button class="btn-fullscreen" onclick="goFull()">📺 מסך מלא</button>
     </div>
 </div>
 
 <script>
-    function loadId() {
-        const val = document.getElementById('idInput').value;
-        if(val) play(val, "שידור חי: " + val);
+    // 1. הפונקציה ששואבת את ה-JSON ומפענחת אותו
+    function loadLiveContent() {
+        const script = document.createElement('script');
+        // שימוש בטכניקת JSONP כדי לעקוף חסימות אבטחה
+        script.src = "https://www.kolhalashon.com/api/LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1?callback=processData";
+        document.body.appendChild(script);
     }
 
-    function play(id, name) {
+    // 2. הפונקציה שמקבלת את הנתונים ובונה את הרשימה
+    window.processData = function(data) {
+        const listContainer = document.getElementById('live-list');
+        listContainer.innerHTML = ''; // ניקוי הטעינה
+
+        if (!data || data.length === 0) {
+            listContainer.innerHTML = 'אין שידורים חיים פעילים';
+            return;
+        }
+
+        data.forEach(item => {
+            const ravName = item.UserNameHebrew || "רב לא ידוע";
+            const topic = item.MainTopicHebrew || "שיעור כללי";
+            const fileId = item.FileId;
+
+            // יצירת אלמנט לכל רב
+            const div = document.createElement('div');
+            div.className = 'rav-item';
+            div.innerHTML = `
+                <div class="rav-info">
+                    <span class="rav-name">${ravName}</span>
+                    <span class="rav-topic">${topic}</span>
+                </div>
+                <button class="btn-play" onclick="startPlay('${fileId}', '${ravName}')">נגן</button>
+            `;
+            listContainer.appendChild(div);
+        });
+    };
+
+    // 3. הפעלת הנגן
+    function startPlay(id, name) {
         document.getElementById('player').src = `https://www.kolhalashon.com/he/regularSite/playShiur/${id}/-1/0/false`;
-        document.getElementById('title').innerText = name;
+        document.getElementById('current-playing').innerText = "מנגן כעת: " + name;
     }
 
+    // 4. מסך מלא
     function goFull() {
-        const elem = document.getElementById("vidBox");
+        const elem = document.getElementById("player-container");
         if (elem.requestFullscreen) elem.requestFullscreen();
         else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
     }
+
+    // הפעלה אוטומטית של הרשימה
+    loadLiveContent();
+    // רענון רשימה כל 2 דקות
+    setInterval(loadLiveContent, 120000);
 </script>
 
 </body>
