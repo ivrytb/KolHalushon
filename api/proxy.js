@@ -1,29 +1,22 @@
 export default async function handler(req, res) {
-    const { endpoint } = req.query;
-    // שימוש ב-API המודרני של קול הלשון
-    const targetUrl = `https://www.kolhalashon.com/api/${endpoint}`;
-
+    // מאפשר לכל אתר (כולל האתר שלך) לגשת ל-API הזה
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
-    res.setHeader('Content-Type', 'application/json');
+
+    // שליפת ה-URL ששלחנו מהדף הראשי
+    const { url } = req.query;
+
+    if (!url) {
+        return res.status(400).json({ error: 'Missing URL parameter' });
+    }
 
     try {
-        const response = await fetch(targetUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Referer': 'https://www.kolhalashon.com/',
-                'Origin': 'https://www.kolhalashon.com',
-                'Accept': 'application/json, text/plain, */*'
-            }
-        });
-
-        if (!response.ok) {
-            return res.status(response.status).json({ error: "Kolel Error", status: response.status });
-        }
-
+        const response = await fetch(url);
         const data = await response.json();
+        
+        // החזרת הנתונים מהשרת של קול הלשון אליך הביתה
         return res.status(200).json(data);
     } catch (error) {
-        return res.status(500).json({ error: "Proxy Crash", details: error.message });
+        return res.status(500).json({ error: 'Failed to fetch data' });
     }
 }
