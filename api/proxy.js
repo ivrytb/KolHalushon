@@ -1,22 +1,32 @@
 export default async function handler(req, res) {
-    // מאפשר לכל אתר (כולל האתר שלך) לגשת ל-API הזה
+    // הגדרות CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET');
 
-    // שליפת ה-URL ששלחנו מהדף הראשי
     const { url } = req.query;
 
     if (!url) {
-        return res.status(400).json({ error: 'Missing URL parameter' });
+        return res.status(400).send('Missing URL');
     }
 
     try {
-        const response = await fetch(url);
-        const data = await response.json();
+        // פיענוח ה-URL למקרה שנטפרי או הדפדפן קידדו אותו פעמיים
+        const targetUrl = decodeURIComponent(url);
         
-        // החזרת הנתונים מהשרת של קול הלשון אליך הביתה
+        const response = await fetch(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
+
+        if (!response.ok) {
+            return res.status(response.status).send(`KHL error: ${response.statusText}`);
+        }
+
+        const data = await response.json();
         return res.status(200).json(data);
     } catch (error) {
-        return res.status(500).json({ error: 'Failed to fetch data' });
+        console.error('Proxy error:', error);
+        return res.status(500).send('Proxy failed to connect to Kol Halashon');
     }
 }
