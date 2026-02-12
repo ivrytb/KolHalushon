@@ -5,33 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מרכז השיעורים - קול הלשון</title>
     <style>
-        :root { --primary: #1a73e8; --live: #d93025; --bg: #f8f9fa; }
+        :root { --primary: #1a73e8; --live: #d93025; --bg: #f8f9fa; --rav: #673ab7; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 20px; direction: rtl; }
         .container { max-width: 850px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         
-        /* נגן וידאו */
-        #player-box { display: none; margin-bottom: 25px; background: #000; border-radius: 12px; padding: 10px; overflow: hidden; }
-        video { width: 100%; border-radius: 8px; background: #000; outline: none; }
-        .close-btn { width: 100%; padding: 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 5px; margin-top: 8px; font-weight: bold; }
+        #player-box { display: none; margin-bottom: 25px; background: #000; border-radius: 12px; padding: 10px; }
+        video { width: 100%; border-radius: 8px; background: #000; }
+        .close-btn { width: 100%; padding: 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 5px; margin-top: 8px; }
 
-        /* חיפוש וניווט */
-        .nav-bar { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
+        .nav-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
         input { flex: 1; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        button { padding: 10px 22px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button { padding: 10px 22px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .btn-search { background: var(--primary); color: white; }
         .btn-live { background: var(--live); color: white; }
-        button:hover { opacity: 0.9; }
 
-        /* רשימת תוצאות */
+        /* שורת רבנים מהירה */
+        .quick-ravs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .rav-chip { background: #ede7f6; color: var(--rav); padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; border: 1px solid #d1c4e9; white-space: nowrap; }
+        .rav-chip:hover { background: var(--rav); color: white; }
+
         .list-container { border-top: 1px solid #eee; }
         .item-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f1f1f1; }
-        .item-info { flex: 1; }
-        .item-name { font-weight: bold; color: #202124; display: block; margin-bottom: 4px; }
-        .item-sub { font-size: 13px; color: #5f6368; }
-        .action-btn { color: #1e8e3e; cursor: pointer; font-weight: bold; padding: 8px 15px; border: 1px solid #1e8e3e; border-radius: 6px; white-space: nowrap; }
-        .action-btn:hover { background: #e6f4ea; }
-
-        #status-msg { text-align: center; padding: 10px; color: #70757a; font-size: 14px; }
+        .item-name { font-weight: bold; color: #202124; display: block; }
+        .action-btn { color: #1e8e3e; cursor: pointer; font-weight: bold; padding: 8px 15px; border: 1px solid #1e8e3e; border-radius: 6px; }
+        #status-msg { text-align: center; padding: 10px; color: #70757a; }
     </style>
 </head>
 <body>
@@ -42,54 +39,62 @@
         <button class="close-btn" onclick="closePlayer()">סגור נגן ×</button>
     </div>
 
+    <div class="quick-ravs" id="ravs-bar">
+        <div class="rav-chip" onclick="loadRav(634)">🏰 האדמו"ר מסאסוב</div>
+        <div class="rav-chip" onclick="loadRav(1116)">🔯 האדמו"ר מביאלא</div>
+        <div class="rav-chip" onclick="loadRav(4746)">📜 הרב יצחק רצאבי</div>
+        <div class="rav-chip" onclick="loadRav(260)">📖 הרב יחיאל צוקר</div>
+    </div>
+
     <div class="nav-bar">
-        <button class="btn-live" onclick="loadContent('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1')">🔴 שידורים חיים</button>
-        <input type="text" id="search-input" placeholder="חפש רב, נושא או מסכת...">
+        <button class="btn-live" onclick="loadContent('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1')">🔴 שידור חי</button>
+        <input type="text" id="search-input" placeholder="חפש רב או נושא...">
         <button class="btn-search" onclick="executeSearch()">חפש</button>
     </div>
 
-    <div id="status-msg">טוען ממשק...</div>
-
+    <div id="status-msg"></div>
     <div id="results-list" class="list-container"></div>
 </div>
 
 <script>
     const PROXY_BASE = "/api/proxy?endpoint=";
 
-    // פונקציה גנרית למשיכת נתונים
     async function apiFetch(endpoint) {
         const status = document.getElementById('status-msg');
-        status.innerText = "מתקשר עם השרת...";
+        status.innerText = "טוען...";
         try {
             const response = await fetch(PROXY_BASE + encodeURIComponent(endpoint));
+            if (!response.ok) return null;
             const data = await response.json();
-            if (data.error) throw new Error(data.details);
             status.innerText = "";
             return data;
         } catch (e) {
-            status.innerText = "שגיאת חיבור. נסה שוב.";
-            console.error(e);
+            status.innerText = "שגיאה בנתונים. ייתכן והחיפוש לא הניב תוצאות.";
             return null;
         }
     }
 
-    // טעינת תוכן (שידורים חיים או רשימות)
     async function loadContent(endpoint) {
         const data = await apiFetch(endpoint);
         renderItems(data);
     }
 
-    // חיפוש רבנים/שיעורים
-    function executeSearch() {
-        const q = document.getElementById('search-input').value;
-        if (q) loadContent(`Ravs/WebSite_GetRavs/1/${encodeURIComponent(q)}/false`);
+    async function loadRav(ravId) {
+        // טעינת שיעורים של רב ספציפי
+        loadContent(`Ravs/WebSite_GetRavShiurim/${ravId}/0/50/1/-1`);
     }
 
-    // הצגת התוצאות על המסך
+    function executeSearch() {
+        const q = document.getElementById('search-input').value;
+        if (!q) return;
+        // ניסיון נתיב חיפוש פשוט יותר למניעת שגיאת JSON
+        loadContent(`Ravs/WebSite_GetRavs/1/${encodeURIComponent(q)}`);
+    }
+
     function renderItems(items) {
         const list = document.getElementById('results-list');
         list.innerHTML = '';
-        if (!items || items.length === 0) {
+        if (!items || !Array.isArray(items) || items.length === 0) {
             document.getElementById('status-msg').innerText = "לא נמצאו תוצאות.";
             return;
         }
@@ -98,17 +103,17 @@
             const card = document.createElement('div');
             card.className = 'item-card';
             
-            const name = item.UserNameHebrew || item.RavName || item.CatDesc1 || item.Title || "שיעור";
+            const name = item.UserNameHebrew || item.RavName || item.CatDesc1 || item.Title || item.ShiurTitle || "שיעור";
             const sub = item.MainTopicHebrew || item.CatDesc2 || "";
             const id = item.FileId || item.ShiurId || item.RavId;
             const isRav = !!item.RavId && !item.FileId;
 
             card.innerHTML = `
-                <div class="item-info">
+                <div>
                     <span class="item-name">${name}</span>
-                    <span class="item-sub">${sub}</span>
+                    <small style="color:gray">${sub}</small>
                 </div>
-                <div class="action-btn" onclick="${isRav ? `loadContent('Ravs/WebSite_GetRavShiurim/${id}/0/50/1/-1')` : `initPlayer('${id}', '${item.LivePubName || ''}')`}">
+                <div class="action-btn" onclick="${isRav ? `loadRav(${id})` : `initPlayer('${id}', '${item.LivePubName || ''}')`}">
                     ${isRav ? 'לשיעורים ←' : '▶ נגן'}
                 </div>
             `;
@@ -116,49 +121,34 @@
         });
     }
 
-    // הפעלת הנגן
     async function initPlayer(id, liveName) {
-        const status = document.getElementById('status-msg');
-        status.innerText = "מכין קובץ לנגינה...";
-        
         try {
-            let finalUrl = "";
-            
-            // בדיקה אם מדובר בשידור חי
+            let url = "";
             if (liveName && liveName.includes('@')) {
-                const channel = liveName.split('@')[0].replace('khl', '');
-                finalUrl = `https://live.kolhalashon.com/live/khl${channel}/playlist.m3u8`;
+                const ch = liveName.split('@')[0].replace('khl', '');
+                url = `https://live.kolhalashon.com/live/khl${ch}/playlist.m3u8`;
             } else {
-                // שיעור מוקלט
                 const res = await apiFetch(`files/getLocationOfFileToVideo/${id}`);
-                finalUrl = res.url || res;
+                url = res ? (res.url || res) : "";
             }
 
-            if (finalUrl) {
-                const playerBox = document.getElementById('player-box');
-                const video = document.getElementById('main-video');
-                
-                playerBox.style.display = 'block';
-                video.src = finalUrl;
-                video.load();
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                status.innerText = "";
+            if (url) {
+                const v = document.getElementById('main-video');
+                document.getElementById('player-box').style.display = 'block';
+                v.src = url;
+                v.play();
+                window.scrollTo(0,0);
             }
-        } catch (e) {
-            status.innerText = "שגיאה: הקובץ חסום או לא נמצא.";
-        }
+        } catch (e) { alert("שגיאה בהפעלת הנגן"); }
     }
 
     function closePlayer() {
-        const video = document.getElementById('main-video');
-        video.pause();
-        video.src = "";
+        const v = document.getElementById('main-video');
+        v.pause(); v.src = "";
         document.getElementById('player-box').style.display = 'none';
     }
 
-    // הפעלה ראשונית
     window.onload = () => loadContent('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1');
 </script>
-
 </body>
 </html>
