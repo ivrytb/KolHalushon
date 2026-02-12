@@ -2,153 +2,101 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מרכז השיעורים - קול הלשון</title>
     <style>
-        :root { --primary: #1a73e8; --live: #d93025; --bg: #f8f9fa; --rav: #673ab7; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); margin: 0; padding: 20px; direction: rtl; }
-        .container { max-width: 850px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
-        
-        #player-box { display: none; margin-bottom: 25px; background: #000; border-radius: 12px; padding: 10px; }
-        video { width: 100%; border-radius: 8px; background: #000; }
-        .close-btn { width: 100%; padding: 10px; background: #333; color: white; border: none; cursor: pointer; border-radius: 5px; margin-top: 8px; }
-
-        .nav-bar { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-        input { flex: 1; min-width: 200px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        button { padding: 10px 22px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .btn-search { background: var(--primary); color: white; }
-        .btn-live { background: var(--live); color: white; }
-
-        /* שורת רבנים מהירה */
-        .quick-ravs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
-        .rav-chip { background: #ede7f6; color: var(--rav); padding: 8px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; border: 1px solid #d1c4e9; white-space: nowrap; }
-        .rav-chip:hover { background: var(--rav); color: white; }
-
-        .list-container { border-top: 1px solid #eee; }
-        .item-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f1f1f1; }
-        .item-name { font-weight: bold; color: #202124; display: block; }
-        .action-btn { color: #1e8e3e; cursor: pointer; font-weight: bold; padding: 8px 15px; border: 1px solid #1e8e3e; border-radius: 6px; }
-        #status-msg { text-align: center; padding: 10px; color: #70757a; }
+        body { font-family: system-ui, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; direction: rtl; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .nav { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; background: #1a73e8; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #eee; align-items: center; }
+        .play-btn { color: green; font-weight: bold; cursor: pointer; border: 1px solid green; padding: 5px 10px; border-radius: 4px; }
+        #player-box { display: none; margin-bottom: 20px; text-align: center; background: #000; padding: 10px; border-radius: 8px; }
+        video { width: 100%; max-height: 400px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div id="player-box">
-        <video id="main-video" controls autoplay crossorigin="anonymous"></video>
-        <button class="close-btn" onclick="closePlayer()">סגור נגן ×</button>
+        <video id="v" controls autoplay crossorigin="anonymous"></video>
+        <button onclick="document.getElementById('player-box').style.display='none'; v.pause();" style="background:#444; margin-top:5px;">סגור נגן</button>
     </div>
 
-    <div class="quick-ravs" id="ravs-bar">
-        <div class="rav-chip" onclick="loadRav(634)">🏰 האדמו"ר מסאסוב</div>
-        <div class="rav-chip" onclick="loadRav(1116)">🔯 האדמו"ר מביאלא</div>
-        <div class="rav-chip" onclick="loadRav(4746)">📜 הרב יצחק רצאבי</div>
-        <div class="rav-chip" onclick="loadRav(260)">📖 הרב יחיאל צוקר</div>
+    <div class="nav">
+        <button onclick="load('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1')" style="background: red;">🔴 שידורים חיים</button>
+        <input type="text" id="q" placeholder="חפש רב (למשל: בידרמן)...">
+        <button onclick="search()">חפש</button>
     </div>
 
-    <div class="nav-bar">
-        <button class="btn-live" onclick="loadContent('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1')">🔴 שידור חי</button>
-        <input type="text" id="search-input" placeholder="חפש רב או נושא...">
-        <button class="btn-search" onclick="executeSearch()">חפש</button>
-    </div>
-
-    <div id="status-msg"></div>
-    <div id="results-list" class="list-container"></div>
+    <div id="list"></div>
 </div>
 
 <script>
-    const PROXY_BASE = "/api/proxy?endpoint=";
+    const PROXY = "/api/proxy?endpoint=";
 
-    async function apiFetch(endpoint) {
-        const status = document.getElementById('status-msg');
-        status.innerText = "טוען...";
+    async function load(endpoint) {
+        const listDiv = document.getElementById('list');
+        listDiv.innerHTML = "טוען נתונים...";
         try {
-            const response = await fetch(PROXY_BASE + encodeURIComponent(endpoint));
-            if (!response.ok) return null;
-            const data = await response.json();
-            status.innerText = "";
-            return data;
+            const res = await fetch(PROXY + encodeURIComponent(endpoint));
+            const data = await res.json();
+            render(data);
         } catch (e) {
-            status.innerText = "שגיאה בנתונים. ייתכן והחיפוש לא הניב תוצאות.";
-            return null;
+            listDiv.innerHTML = "שגיאה בטעינה.";
         }
     }
 
-    async function loadContent(endpoint) {
-        const data = await apiFetch(endpoint);
-        renderItems(data);
+    function search() {
+        const val = document.getElementById('q').value;
+        if(val) load(`Ravs/WebSite_GetRavs/1/${encodeURIComponent(val)}`);
     }
 
-    async function loadRav(ravId) {
-        // טעינת שיעורים של רב ספציפי
-        loadContent(`Ravs/WebSite_GetRavShiurim/${ravId}/0/50/1/-1`);
-    }
+    function render(data) {
+        const listDiv = document.getElementById('list');
+        listDiv.innerHTML = "";
+        if(!data || data.length === 0) { listDiv.innerHTML = "אין תוצאות."; return; }
 
-    function executeSearch() {
-        const q = document.getElementById('search-input').value;
-        if (!q) return;
-        // ניסיון נתיב חיפוש פשוט יותר למניעת שגיאת JSON
-        loadContent(`Ravs/WebSite_GetRavs/1/${encodeURIComponent(q)}`);
-    }
-
-    function renderItems(items) {
-        const list = document.getElementById('results-list');
-        list.innerHTML = '';
-        if (!items || !Array.isArray(items) || items.length === 0) {
-            document.getElementById('status-msg').innerText = "לא נמצאו תוצאות.";
-            return;
-        }
-
-        items.forEach(item => {
-            const card = document.createElement('div');
-            card.className = 'item-card';
-            
-            const name = item.UserNameHebrew || item.RavName || item.CatDesc1 || item.Title || item.ShiurTitle || "שיעור";
-            const sub = item.MainTopicHebrew || item.CatDesc2 || "";
-            const id = item.FileId || item.ShiurId || item.RavId;
+        data.forEach(item => {
+            const id = item.FileId || item.RavId;
+            const name = item.UserNameHebrew || item.RavName || item.CatDesc1 || "שיעור";
             const isRav = !!item.RavId && !item.FileId;
 
-            card.innerHTML = `
-                <div>
-                    <span class="item-name">${name}</span>
-                    <small style="color:gray">${sub}</small>
-                </div>
-                <div class="action-btn" onclick="${isRav ? `loadRav(${id})` : `initPlayer('${id}', '${item.LivePubName || ''}')`}">
+            const div = document.createElement('div');
+            div.className = 'item';
+            div.innerHTML = `
+                <span>${name}</span>
+                <span class="play-btn" onclick="${isRav ? `load('Ravs/WebSite_GetRavShiurim/${id}/0/50/1/-1')` : `play('${id}', '${item.LivePubName || ''}')`}">
                     ${isRav ? 'לשיעורים ←' : '▶ נגן'}
-                </div>
+                </span>
             `;
-            list.appendChild(card);
+            listDiv.appendChild(div);
         });
     }
 
-    async function initPlayer(id, liveName) {
-        try {
-            let url = "";
-            if (liveName && liveName.includes('@')) {
-                const ch = liveName.split('@')[0].replace('khl', '');
-                url = `https://live.kolhalashon.com/live/khl${ch}/playlist.m3u8`;
-            } else {
-                const res = await apiFetch(`files/getLocationOfFileToVideo/${id}`);
-                url = res ? (res.url || res) : "";
-            }
+    async function play(id, liveName) {
+        const v = document.getElementById('v');
+        const box = document.getElementById('player-box');
+        let url = "";
 
-            if (url) {
-                const v = document.getElementById('main-video');
-                document.getElementById('player-box').style.display = 'block';
-                v.src = url;
-                v.play();
-                window.scrollTo(0,0);
-            }
-        } catch (e) { alert("שגיאה בהפעלת הנגן"); }
+        if (liveName && liveName.includes('@')) {
+            // שידור חי - הזרמה ישירה
+            const channel = liveName.split('@')[0];
+            url = `https://live.kolhalashon.com/live/${channel}/playlist.m3u8`;
+        } else {
+            // שיעור מוקלט - שימוש בנתיב שראינו ב"הגזרה" או בנתיב הקבצים
+            // ננסה את הנתיב הכי פשוט שעובד בנטפרי:
+            url = `https://www.kolhalashon.com/api/files/GetMp3FileToPlay/${id}`;
+        }
+
+        box.style.display = 'block';
+        v.src = url;
+        v.play();
+        window.scrollTo(0,0);
     }
 
-    function closePlayer() {
-        const v = document.getElementById('main-video');
-        v.pause(); v.src = "";
-        document.getElementById('player-box').style.display = 'none';
-    }
-
-    window.onload = () => loadContent('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1');
+    // טעינה ראשונית של שידורים חיים
+    load('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1');
 </script>
 </body>
 </html>
