@@ -9,27 +9,22 @@
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; direction: rtl; }
         .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         
-        /* נגן משופר */
-        #player-box { display: none; margin-bottom: 25px; background: #000; border-radius: 15px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+        #player-box { display: none; margin-bottom: 25px; background: #000; border-radius: 15px; overflow: hidden; }
         .iframe-wrapper { position: relative; padding-top: 56.25%; }
         .iframe-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-        .close-btn { width: 100%; padding: 15px; background: #d93025; color: white; border: none; cursor: pointer; font-weight: bold; font-size: 16px; }
+        .close-btn { width: 100%; padding: 15px; background: #d93025; color: white; border: none; cursor: pointer; font-weight: bold; }
 
         .nav-bar { display: flex; gap: 10px; margin-bottom: 20px; }
-        input { flex: 1; padding: 14px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; outline: none; transition: 0.3s; }
-        input:focus { border-color: var(--primary); }
+        input { flex: 1; padding: 14px; border: 2px solid #eee; border-radius: 10px; font-size: 16px; outline: none; }
         button { padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
         .btn-search { background: var(--primary); color: white; }
-        .btn-live { background: var(--live); color: white; animation: pulse 2s infinite; }
+        .btn-live { background: var(--live); color: white; }
 
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
-
-        .item-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f0f0f0; transition: 0.2s; }
-        .item-card:hover { background: #fcfcfc; }
-        .item-name { font-weight: 600; color: #333; font-size: 16px; }
+        .item-card { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #f0f0f0; }
+        .item-name { font-weight: 600; color: #333; }
         .action-btn { color: #1e8e3e; cursor: pointer; font-weight: bold; padding: 8px 16px; border: 2px solid #1e8e3e; border-radius: 8px; }
         
-        #status-msg { text-align: center; color: #666; padding: 10px; font-weight: bold; }
+        #status-msg { text-align: center; color: #666; padding: 10px; }
     </style>
 </head>
 <body>
@@ -39,37 +34,46 @@
         <div class="iframe-wrapper">
             <iframe id="kol-player" allowfullscreen allow="autoplay"></iframe>
         </div>
-        <button class="close-btn" onclick="closePlayer()">סגור נגן ויציאה מהשיעור ×</button>
+        <button class="close-btn" onclick="closePlayer()">סגור נגן ×</button>
     </div>
 
     <div class="nav-bar">
-        <button class="btn-live" onclick="loadContent('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1')">🔴 שידור חי עכשיו</button>
-        <input type="text" id="search-input" placeholder="חיפוש רב (לדוגמה: בידרמן, צוקר)...">
+        <button class="btn-live" onclick="loadContent('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1')">🔴 שידור חי</button>
+        <input type="text" id="search-input" placeholder="חיפוש רב או נושא...">
         <button class="btn-search" onclick="executeSearch()">חפש</button>
     </div>
 
-    <div id="status-msg">מוכן לפעילות</div>
+    <div id="status-msg">טוען...</div>
     <div id="results-list"></div>
 </div>
 
 <script>
-    const PROXY = "/api/proxy?endpoint=";
+    // אנחנו פונים ישירות לקול הלשון. ה-CORS עלול להציק בחלק מהדפדפנים, 
+    // אבל בנטפרי זה לרוב עובר כי השרתים שלהם "מנקים" חסימות מסוימות.
+    const BASE_API = "https://www.kolhalashon.com/api/";
 
     async function loadContent(endpoint) {
-        const list = document.getElementById('results-list');
         const status = document.getElementById('status-msg');
-        status.innerText = "טוען נתונים מהשרת...";
+        status.innerText = "מתחבר לקול הלשון...";
         
         try {
-            const res = await fetch(PROXY + encodeURIComponent(endpoint));
+            // פנייה ישירה ללא פרוקסי
+            const res = await fetch(BASE_API + endpoint);
+            if (!res.ok) throw new Error("Blocked");
             const data = await res.json();
-            
-            if (data.error) throw new Error();
-            
             status.innerText = "";
             render(data);
         } catch (e) {
-            status.innerText = "שגיאה: השרת חסם את הבקשה. נסה שוב בעוד דקה.";
+            status.innerText = "שגיאה בגישה ישירה. מנסה דרך הפרוקסי כגיבוי...";
+            // גיבוי למקרה של חסימת CORS בדפדפן
+            try {
+                const proxyRes = await fetch("/api/proxy?endpoint=" + encodeURIComponent(endpoint));
+                const proxyData = await proxyRes.json();
+                render(proxyData);
+                status.innerText = "";
+            } catch (err) {
+                status.innerText = "חסימה סופית של קול הלשון. נסה לרענן את הדף.";
+            }
         }
     }
 
@@ -90,14 +94,12 @@
             const name = item.UserNameHebrew || item.RavName || item.Title || item.ShiurTitle || "שיעור";
             const id = item.FileId || item.ShiurId || item.RavId;
             const isRav = !!item.RavId && !item.FileId;
-
-            // בדיקה האם זה שידור חי
             const liveId = item.LivePubName ? item.LivePubName.split('@')[0].replace('khl', '') : null;
 
             div.innerHTML = `
                 <span class="item-name">${name}</span>
                 <div class="action-btn" onclick="${isRav ? `loadContent('Ravs/WebSite_GetRavShiurim/${id}/0/50/1/-1')` : `play('${id}', '${liveId}')`}">
-                    ${isRav ? 'לשיעורים ←' : '▶ נגן כעת'}
+                    ${isRav ? 'לשיעורים ←' : '▶ נגן'}
                 </div>
             `;
             list.appendChild(div);
@@ -110,11 +112,9 @@
         
         let url = "";
         if (liveChannelId && liveChannelId !== "null") {
-            // פורמט נגן שידור חי מיוצב ל-2026
-            url = `https://www.kolhalashon.com/NewLogos/PlayVideoV2.aspx?lp=${liveChannelId}&v=true&autoplay=true`;
+            url = `https://www.kolhalashon.com/NewLogos/PlayVideoV2.aspx?lp=${liveChannelId}&v=true`;
         } else {
-            // פורמט נגן ארכיון מיוצב
-            url = `https://www.kolhalashon.com/NewLogos/PlayVideoV2.aspx?FileID=${fileId}&v=true&autoplay=true`;
+            url = `https://www.kolhalashon.com/NewLogos/PlayVideoV2.aspx?FileID=${fileId}&v=true`;
         }
 
         box.style.display = 'block';
@@ -127,7 +127,6 @@
         document.getElementById('kol-player').src = "";
     }
 
-    // טעינה ראשונית
     loadContent('LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1');
 </script>
 </body>
