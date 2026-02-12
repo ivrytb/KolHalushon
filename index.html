@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>נגן תורה - שידורים חיים</title>
+    <title>נגן תורה חי</title>
     <style>
         body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; background: #1a1a1b; color: white; overflow: hidden; }
         
@@ -18,36 +18,39 @@
         .item:hover { background: #444; }
         .item.active { border-right-color: #1a73e8; background: #3e3e42; }
         .item b { display: block; color: #ff4d4d; font-size: 0.8rem; margin-bottom: 3px; }
-        .item span { font-size: 0.9rem; display: block; }
-        .item small { color: #aaa; font-size: 0.75rem; }
 
-        /* אזור הנגן */
+        /* אזור הנגן - כיול לפי הבקשה שלך */
         .main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         
         .clipper {
-            width: 960px; height: 550px; overflow: hidden; position: relative;
-            border-radius: 8px; background: #000; box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            width: 1000px; /* רחב יותר */
+            height: 580px; /* עמוק יותר למטה */
+            overflow: hidden; 
+            position: relative;
+            border-radius: 8px; 
+            background: #000;
         }
 
         iframe {
-            width: 1600px; height: 1800px; position: absolute;
-            top: -95px;    /* כיול גובה */
-            right: -315px; /* כיול ימינה/שמאלה */
+            width: 1700px; 
+            height: 1800px; 
+            position: absolute;
+            top: -90px;    /* פחות מלמעלה */
+            right: -345px; /* יותר ימינה - להסתיר הכל משמאל */
             border: none;
         }
 
         .actions { margin-top: 15px; display: flex; gap: 15px; align-items: center; }
         .btn-fullscreen { 
-            padding: 8px 20px; background: #1a73e8; border: none; color: white; 
+            padding: 10px 25px; background: #d93025; border: none; color: white; 
             border-radius: 20px; cursor: pointer; font-weight: bold;
         }
-        .btn-fullscreen:hover { background: #1557b0; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <div class="sidebar-header">🔴 שידורים חיים עכשיו</div>
+    <div class="sidebar-header">🔴 שידורים חיים (אוטומטי)</div>
     <div id="live-list">טוען רשימה...</div>
 </div>
 
@@ -58,78 +61,65 @@
     
     <div class="actions">
         <div id="curTitle">בחר שיעור מהרשימה</div>
-        <button class="btn-fullscreen" onclick="goFull()">📺 מסך מלא</button>
+        <button class="btn-fullscreen" onclick="goFull()">📺 הגדל למסך מלא</button>
     </div>
 </div>
 
 <script>
-    // 1. פונקציית הציד: משיכת ה-API של קול הלשון
+    // הציד האוטומטי - תיקון ה-Callback ל-test
     function fetchLive() {
         const script = document.createElement('script');
-        // הקישור שסיפקת עם ה-callback
-        script.src = "https://www.kolhalashon.com/api/LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1?callback=renderList";
+        script.src = "https://www.kolhalashon.com/api/LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1?callback=test";
         document.body.appendChild(script);
     }
 
-    // 2. פונקציית הרינדור: הפיכת הנתונים לרשימה לחיצה
-    window.renderList = function(data) {
+    // הפונקציה שקול הלשון קורא לה (חייבת להיקרא test)
+    window.test = function(data) {
         const list = document.getElementById('live-list');
         list.innerHTML = '';
         
         if (!data || data.length === 0) {
-            list.innerHTML = '<div style="padding:20px;">אין שידורים פעילים כרגע</div>';
+            list.innerHTML = '<div style="padding:20px;">אין שידורים כרגע</div>';
             return;
         }
 
         data.forEach(shiur => {
             const div = document.createElement('div');
             div.className = 'item';
-            // ה-ID מחולץ מהנתונים שחזרו
             const id = shiur.ShiurId || shiur.FileId;
             
             div.innerHTML = `
-                <b>🔴 בשידור</b>
-                <span>${shiur.Title || 'שיעור ללא כותרת'}</span>
-                <small>${shiur.RavName || ''}</small>
+                <b>🔴 בשידור חי</b>
+                <span>${shiur.Title}</span>
+                <small style="display:block; color:#aaa;">${shiur.RavName || ''}</small>
             `;
             
-            div.onclick = () => {
-                play(id, shiur.Title, div);
-            };
+            div.onclick = () => play(id, shiur.Title, div);
             list.appendChild(div);
         });
 
-        // טעינה אוטומטית של הראשון ברשימה אם הנגן ריק
-        if (document.getElementById('player').src.includes('about:blank')) {
+        // טעינת השיעור הראשון אוטומטית בטעינה ראשונה
+        if (document.getElementById('player').src.includes('about:blank') && list.firstChild) {
             list.firstChild.click();
         }
     };
 
     function play(id, title, el) {
-        // הפעלה בשיטת ה"שיעור הישיר" שעובדת לנו
         document.getElementById('player').src = `https://www.kolhalashon.com/he/regularSite/playShiur/${id}/-1/0/false`;
         document.getElementById('curTitle').innerText = title;
-        
         document.querySelectorAll('.item').forEach(i => i.classList.remove('active'));
         el.classList.add('active');
     }
 
-    // 3. טריק המסך המלא
+    // פונקציית מסך מלא (כמו לחיצה על F)
     function goFull() {
         const elem = document.getElementById("clipper-element");
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen();
-        } else if (elem.webkitRequestFullscreen) { /* Safari */
-            elem.webkitRequestFullscreen();
-        } else if (elem.msRequestFullscreen) { /* IE11 */
-            elem.msRequestFullscreen();
-        }
+        if (elem.requestFullscreen) { elem.requestFullscreen(); }
+        else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
     }
 
-    // הפעלה
     fetchLive();
-    // עדכון רשימה כל 3 דקות
-    setInterval(fetchLive, 180000);
+    setInterval(fetchLive, 120000); // רענון רשימה כל 2 דקות
 </script>
 
 </body>
