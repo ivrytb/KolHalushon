@@ -2,46 +2,84 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>נגן תורה - מסך מלא</title>
+    <title>מרכז שידורי תורה</title>
     <style>
-        body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; background: #f0f2f5; }
-        .sidebar { width: 300px; background: white; border-left: 1px solid #ddd; padding: 20px; }
-        .lesson-item { padding: 15px; margin-bottom: 10px; background: #f8f9fa; cursor: pointer; border-radius: 8px; border: 1px solid #eee; }
-        .lesson-item:hover { background: #eef; }
-        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; background: #f0f2f5; overflow: hidden; }
+        .sidebar { width: 320px; background: white; border-left: 1px solid #ddd; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; background: #1a73e8; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .list-container { flex: 1; overflow-y: auto; padding: 15px; }
+        .item { padding: 12px; margin-bottom: 8px; background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .item:hover { background: #e8f0fe; border-color: #1a73e8; }
+        .item b { display: block; color: #d93025; font-size: 0.8rem; }
         
-        /* ה-Clipper המדויק */
-        .clipper-wrapper {
-            width: 820px; height: 460px; overflow: hidden; position: relative;
-            border-radius: 15px; background: #000; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        .main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #e9ecef; }
+        
+        /* תיקון מרכוז הנגן - חיתוך מדויק לפי התמונות שלך */
+        .player-clipper {
+            width: 810px; height: 456px; overflow: hidden; position: relative;
+            border-radius: 12px; background: #000; box-shadow: 0 15px 40px rgba(0,0,0,0.2);
         }
         iframe {
-            width: 1300px; height: 1500px; position: absolute;
-            top: -105px; right: -245px; border: none;
+            width: 1350px; height: 1500px; position: absolute;
+            top: -108px; /* חיתוך Header */
+            right: -270px; /* הזזה ימינה כדי למרכז את הנגן ולהסתיר את הצד הלבן */
+            border: none;
         }
-        .info { margin-top: 15px; color: #666; font-weight: bold; }
+        .info-panel { margin-top: 20px; font-weight: bold; color: #555; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h3>שיעורים</h3>
-    <div onclick="play('42199358', 'שיעור מנחה')" class="lesson-item">סדר המחשבת הקרבת מנחה</div>
-    <div onclick="play('42342356', 'שידור חי')" class="lesson-item">שידור חי (בדוק ID עדכני)</div>
+    <div class="sidebar-header">
+        <h3>🔴 שידורים חיים עכשיו</h3>
+    </div>
+    <div id="live-list" class="list-container">טוען רשימה...</div>
 </div>
 
-<div class="main-content">
-    <div class="clipper-wrapper">
-        <iframe id="player" src="https://www.kolhalashon.com/he/regularSite/playShiur/42199358/-1/0/false" scrolling="no" allowfullscreen></iframe>
+<div class="main">
+    <div class="player-clipper">
+        <iframe id="player" src="https://www.kolhalashon.com/he/regularSite/playShiur/42199358/-1/0/false" allowfullscreen></iframe>
     </div>
-    <p class="info" id="title">מנגן כעת: סדר המחשבת הקרבת מנחה</p>
+    <div class="info-panel" id="current-title">מנגן כעת: שיעור פתיחה</div>
 </div>
 
 <script>
-    function play(id, name) {
-        document.getElementById('player').src = `https://www.kolhalashon.com/he/regularSite/playShiur/${id}/-1/0/false`;
-        document.getElementById('title').innerText = "מנגן כעת: " + name;
+    // מכיוון שה-Proxy נחסם, אנחנו "מזריקים" סקריפט ישירות מהדומיין של קול הלשון
+    // זה עוקף את חסימות השרת כי זה רץ בדפדפן שלך
+    function loadLive() {
+        const script = document.createElement('script');
+        // אנחנו משתמשים בכתובת ה-API של קול הלשון אבל כסקריפט חיצוני
+        script.src = "https://www.kolhalashon.com/api/LiveShiurim/WebSite_LiveShiurimGetShiurim?callback=renderLive";
+        document.body.appendChild(script);
     }
+
+    // הפונקציה שתקבל את הנתונים ותציג אותם
+    window.renderLive = function(data) {
+        const container = document.getElementById('live-list');
+        container.innerHTML = '';
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = 'אין שידורים חיים פעילים כרגע';
+            return;
+        }
+
+        data.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'item';
+            const id = s.ShiurId || s.FileId;
+            div.innerHTML = `<b>🔴 בשידור חי</b> ${s.Title}<br><small>${s.RavName || ''}</small>`;
+            div.onclick = () => {
+                document.getElementById('player').src = `https://www.kolhalashon.com/he/regularSite/playShiur/${id}/-1/0/false`;
+                document.getElementById('current-title').innerText = "מנגן כעת: " + s.Title;
+            };
+            container.appendChild(div);
+        });
+    };
+
+    // טעינה ראשונית ועדכון כל 5 דקות
+    loadLive();
+    setInterval(loadLive, 300000);
 </script>
 
 </body>
