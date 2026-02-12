@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מרכז השיעורים - קול הלשון</title>
+    <style>
+        :root { --primary: #1a3a5f; --secondary: #28a745; --bg: #f1f3f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: auto; }
+        #player-box { position: sticky; top: 10px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); z-index: 1000; margin-bottom: 20px; display: none; text-align: center; }
+        video { width: 100%; max-height: 300px; border-radius: 8px; background: #000; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 12px; border: none; background: white; cursor: pointer; font-weight: bold; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .tab-btn.active { background: var(--primary); color: white; }
+        .search-container { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; gap: 10px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        .item-card { background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-right: 5px solid var(--primary); }
+        .btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-play { background: var(--secondary); color: white; }
+        #status { text-align: center; padding: 20px; color: #666; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="player-box">
+        <div id="playing-now" style="margin-bottom:10px; font-weight:bold;"></div>
+        <video id="main-video" controls autoplay></video>
+        <button class="btn" style="margin-top:10px" onclick="closePlayer()">סגור נגן</button>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="changeTab('live', this)">🔴 שידורים חיים</button>
+        <button class="tab-btn" onclick="changeTab('sasov', this)">🏰 האדמו"ר מסאסוב</button>
+        <button class="tab-btn" onclick="changeTab('search', this)">🔍 חיפוש רבנים</button>
+    </div>
+
+    <div id="search-section" class="search-container">
+        <input type="text" id="search-query" placeholder="הקלד שם רב...">
+        <button class="btn btn-play" onclick="searchRavs()">חפש</button>
+    </div>
+
+    <div id="status">טוען...</div>
+    <div id="content-list"></div>
+</div>
+
+<script>
+    // הפניה לפונקציית השרת בורסל
+    const PROXY = "/api/proxy?endpoint=";
+
+    async function callApi(endpoint) {
+        try {
+            const res = await fetch(PROXY + encodeURIComponent(endpoint));
+            return await res.json();
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function changeTab(mode, btn) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('search-section').style.display = (mode === 'search') ? 'flex' : 'none';
+        
+        if (mode === 'live') loadLive();
+        if (mode === 'sasov') loadRav(634);
+    }
+
+    async function loadLive() {
+        const data = await callApi("LiveShiurim/WebSite_GetLiveShiurim/1/true/true/30/-1");
+        render(data);
+    }
+
+    async function searchRavs() {
+        const q = document.getElementById('search-query').value;
+        const data = await callApi("Ravs/WebSite_GetRavs/1/" + encodeURIComponent(q));
+        const list = document.getElementById('content-list');
+        list.innerHTML = '';
+        data.forEach(rav => {
+            const d = document.createElement('div');
+            d.className = 'item-card';
+            d.innerHTML = `<span>${rav.RavName}</span><button class="btn btn-play" onclick="loadRav(${rav.RavId})">שיעורים</button>`;
+            list.appendChild(d);
+        });
+    }
+
+    async function loadRav(id) {
+        const data = await callApi(`Ravs/WebSite_GetRavShiurim/${id}/0/50/1/-1`);
+        render(data);
+    }
+
+    function render(items) {
+        const list = document.getElementById('content-list');
+        list.innerHTML = '';
+        document.getElementById('status').innerText = "";
+        items.forEach(item => {
+            const title = item.Title || item.ShiurTitle;
+            const card = document.createElement('div');
+            card.className = 'item-card';
+            card.innerHTML = `
+                <span>${title}</span>
+                <button class="btn btn-play" onclick="play('${item.ShiurId || item.FileId}', '${title}')">נגן</button>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    async function play(id, title) {
+        const res = await callApi("files/getLocationOfFileToVideo/" + id);
+        const player = document.getElementById('main-video');
+        document.getElementById('player-box').style.display = 'block';
+        document.getElementById('playing-now').innerText = title;
+        player.src = res.url || res;
+        window.scrollTo(0,0);
+    }
+
+    function closePlayer() {
+        document.getElementById('player-box').style.display = 'none';
+        document.getElementById('main-video').pause();
+    }
+
+    loadLive();
+</script>
+</body>
+</html>
