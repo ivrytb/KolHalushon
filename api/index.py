@@ -6,9 +6,9 @@ import time
 import os
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 app = Flask(__name__)
 
+# שליפת הטוקן ממשתנה הסביבה בורסל
 YM_TOKEN = os.environ.get('YM_TOKEN')
 
 def get_index_html():
@@ -29,49 +29,37 @@ def upload_to_ym():
     target_url = data.get('url')
 
     if not YM_TOKEN:
-        return jsonify({"error": "YM_TOKEN missing in Vercel settings"}), 500
-    
+        return jsonify({"error": "YM_TOKEN missing"}), 500
     if not target_url:
         return jsonify({"error": "Missing URL"}), 400
 
     try:
         unique_id = str(uuid.uuid4())
-        timestamp = int(time.time())
-        filename = f"y24_{timestamp}.mp3"
+        
+        # שם קובץ מספרי בלבד - מבוסס על זמן (למשל: 1740182400)
+        # ימות המשיח דורשים סיומת .wav כדי שההמרה תעבוד נכון
+        numeric_name = str(int(time.time()))
+        filename = f"{numeric_name}.wav"
+        
+        # נתיב נקי: ivr2:KolMevaser/1740182400.wav
         dest_path = f"ivr2:KolMevaser/{filename}"
 
-        # תחפושת דפדפן משופרת למניעת שגיאת 403
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': '*/*',
-            'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
-            'Referer': 'https://www.yiddish24.com/',
-            'Origin': 'https://www.yiddish24.com',
-            'Connection': 'keep-alive',
-            'Sec-Fetch-Dest': 'audio',
-            'Sec-Fetch-Mode': 'no-cors',
-            'Sec-Fetch-Site': 'cross-site'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://www.yiddish24.com/'
         }
 
-        # התחלת הורדה מ-Y24
-        session = requests.Session() # שימוש ב-Session שומר על עוגיות וחיבור יציב
-        y24_res = session.get(target_url, headers=headers, stream=True, timeout=60)
-        
-        # אם עדיין יש שגיאה, נחזיר אותה בצורה ברורה
+        y24_res = requests.get(target_url, headers=headers, stream=True, timeout=60)
         if y24_res.status_code != 200:
-            return jsonify({"error": f"Yiddish24 blocked access (Status {y24_res.status_code}). Check the URL."}), 403
+            return jsonify({"error": f"Y24 blocked access: {y24_res.status_code}"}), 403
 
         total_size = int(y24_res.headers.get('content-length', 0))
-        
         chunk_size = 5 * 1024 * 1024 
         part_index = 0
         byte_offset = 0
 
         for chunk in y24_res.iter_content(chunk_size=chunk_size):
-            if not chunk:
-                break
-            
-            current_chunk_size = len(chunk)
+            if not chunk: break
             
             upload_params = {
                 'token': YM_TOKEN,
@@ -79,24 +67,21 @@ def upload_to_ym():
                 'qquuid': unique_id,
                 'qqpartindex': part_index,
                 'qqpartbyteoffset': byte_offset,
-                'qqchunksize': current_chunk_size,
-                'qqtotalfilesize': total_size if total_size > 0 else byte_offset + current_chunk_size,
+                'qqchunksize': len(chunk),
+                'qqtotalfilesize': total_size if total_size > 0 else byte_offset + len(chunk),
                 'qqfilename': filename,
                 'uploader': 'yemot-admin'
             }
             
-            files = {'qqfile': (filename, chunk)}
+            files = {'qqfile': (filename, chunk, 'audio/wav')}
             
-            ym_res = requests.post("https://www.call2all.co.il/ym/api/UploadFile", 
-                                   files=files, data=upload_params, timeout=60)
+            requests.post("https://www.call2all.co.il/ym/api/UploadFile", 
+                          files=files, data=upload_params, timeout=60)
             
-            if ym_res.status_code != 200:
-                return jsonify({"error": f"Failed to upload part {part_index} to Yemot"}), 500
-            
-            byte_offset += current_chunk_size
+            byte_offset += len(chunk)
             part_index += 1
 
-        # סיום העלאה
+        # שלב הסיום - כאן אנחנו מוודאים שהקובץ הופך ל-wav טלפוני
         done_params = {
             'token': YM_TOKEN,
             'path': dest_path,
@@ -104,20 +89,18 @@ def upload_to_ym():
             'qqfilename': filename,
             'qqtotalfilesize': byte_offset,
             'qqtotalparts': part_index,
-            'convertAudio': 0
+            'convertAudio': 1 
         }
         
         done_res = requests.get("https://www.call2all.co.il/ym/api/UploadFile", params=done_params)
         done_data = done_res.json()
 
         if done_data.get('status') == 'success':
+            # לינק הורדה סופי עם שם מספרי
             download_url = f"https://www.call2all.co.il/ym/api/DownloadFile?token={YM_TOKEN}&path={dest_path}"
-            return jsonify({
-                "status": "success",
-                "download_url": download_url
-            })
+            return jsonify({"status": "success", "download_url": download_url})
         else:
-            return jsonify({"error": f"Yemot error: {done_data.get('message')}"}), 500
+            return jsonify({"error": done_data.get('message')}), 500
 
     except Exception as e:
-        return jsonify({"error": f"Server Error: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
