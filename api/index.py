@@ -29,12 +29,12 @@ def download():
                     yield chunk
 
         return Response(
-            generate(),
-            content_type='audio/mpeg',
-            headers={
-                "Content-Disposition": "attachment; filename=y24_audio.mp3",
-                "Cache-Control": "no-cache" # מונע מהדפדפן לנסות לשמור גרסה חלקית
-            }
-        )
+        generate(),
+        content_type='application/octet-stream',
+        headers={
+            "Content-Disposition": "attachment; filename=y24_file.pdf"
+        }
+    )
+        
     except Exception as e:
         return f"שגיאה בשרת: {str(e)}", 500
