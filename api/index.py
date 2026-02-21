@@ -1,4 +1,4 @@
-from flask import Flask, request, Response, render_template_string
+from flask import Flask, request, Response
 import requests
 import urllib3
 import os
@@ -8,22 +8,26 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
-# פונקציה לקריאת ה-HTML מתיקיית public (למקרה שה-rewrite לא תופס)
 def get_html_content():
+    # איתור נתיב הקובץ index.html בצורה אבסולוטית בשרת
     try:
-        path = os.path.join(os.getcwd(), 'public', 'index.html')
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        root_dir = os.path.dirname(current_dir)
+        path = os.path.join(root_dir, 'public', 'index.html')
+        
         with open(path, 'r', encoding='utf-8') as f:
             return f.read()
-    except:
-        return "<h1>Error: index.html not found in public folder</h1>"
+    except Exception as e:
+        return f"<h1>שגיאה בטעינת הממשק</h1><p>{str(e)}</p>"
 
-@app.route('/', methods=['GET', 'POST'])
-def handle_request():
-    # אם המשתמש שלח טופס ב-POST (בקשת הורדה)
+@app.route('/', defaults={'path': ''}, methods=['GET', 'POST'])
+@app.route('/<path:path>', methods=['GET', 'POST'])
+def catch_all(path):
+    # טיפול בבקשת הורדה (POST)
     if request.method == 'POST':
         target_url = request.form.get('url')
         if not target_url:
-            return "נא להזין כתובת תקינה", 400
+            return "נא להזין קישור תקין", 400
 
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -31,7 +35,7 @@ def handle_request():
         }
 
         try:
-            # הורדה מהמקור ב-Stream
+            # הורדה מהמקור (Y24) ושליחה חזרה למשתמש ב-Stream
             req = requests.get(target_url, headers=headers, stream=True, verify=False, timeout=60)
             
             def generate():
@@ -48,7 +52,9 @@ def handle_request():
                 }
             )
         except Exception as e:
-            return f"שגיאה בהורדה: {str(e)}", 500
+            return f"שגיאה בתהליך ההורדה: {str(e)}", 500
 
-    # אם זו כניסה רגילה (GET), נציג את ממשק המשתמש
-    return render_template_string(get_html_content())
+    # טיפול בכניסה לאתר (GET)
+    return get_html_content()
+
+# ורסל זקוק לאובייקט app
