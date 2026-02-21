@@ -5,12 +5,10 @@ import uuid
 import time
 import os
 
-# ביטול אזהרות SSL
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
 
-# שליפת הטוקן ממשתנה הסביבה שהגדרת בורסל
 YM_TOKEN = os.environ.get('YM_TOKEN')
 
 def get_index_html():
@@ -31,31 +29,44 @@ def upload_to_ym():
     target_url = data.get('url')
 
     if not YM_TOKEN:
-        return jsonify({"error": "YM_TOKEN is not defined in Vercel environment variables"}), 500
+        return jsonify({"error": "YM_TOKEN missing in Vercel settings"}), 500
     
     if not target_url:
-        return jsonify({"error": "Missing target URL"}), 400
+        return jsonify({"error": "Missing URL"}), 400
 
     try:
-        # יצירת מזהים ייחודיים
         unique_id = str(uuid.uuid4())
         timestamp = int(time.time())
         filename = f"y24_{timestamp}.mp3"
         dest_path = f"ivr2:KolMevaser/{filename}"
 
-        # פתיחת Stream מ-Y24
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        y24_res = requests.get(target_url, headers=headers, stream=True, timeout=60)
-        y24_res.raise_for_status()
+        # תחפושת דפדפן משופרת למניעת שגיאת 403
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': '*/*',
+            'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
+            'Referer': 'https://www.yiddish24.com/',
+            'Origin': 'https://www.yiddish24.com',
+            'Connection': 'keep-alive',
+            'Sec-Fetch-Dest': 'audio',
+            'Sec-Fetch-Mode': 'no-cors',
+            'Sec-Fetch-Site': 'cross-site'
+        }
+
+        # התחלת הורדה מ-Y24
+        session = requests.Session() # שימוש ב-Session שומר על עוגיות וחיבור יציב
+        y24_res = session.get(target_url, headers=headers, stream=True, timeout=60)
         
+        # אם עדיין יש שגיאה, נחזיר אותה בצורה ברורה
+        if y24_res.status_code != 200:
+            return jsonify({"error": f"Yiddish24 blocked access (Status {y24_res.status_code}). Check the URL."}), 403
+
         total_size = int(y24_res.headers.get('content-length', 0))
         
-        # הגדרת גודל חלק - 5MB
         chunk_size = 5 * 1024 * 1024 
         part_index = 0
         byte_offset = 0
 
-        # לולאת העלאה בחלקים
         for chunk in y24_res.iter_content(chunk_size=chunk_size):
             if not chunk:
                 break
@@ -80,12 +91,12 @@ def upload_to_ym():
                                    files=files, data=upload_params, timeout=60)
             
             if ym_res.status_code != 200:
-                return jsonify({"error": f"Failed to upload part {part_index}"}), 500
+                return jsonify({"error": f"Failed to upload part {part_index} to Yemot"}), 500
             
             byte_offset += current_chunk_size
             part_index += 1
 
-        # שליחת בקשת סיום (Done)
+        # סיום העלאה
         done_params = {
             'token': YM_TOKEN,
             'path': dest_path,
@@ -109,4 +120,4 @@ def upload_to_ym():
             return jsonify({"error": f"Yemot error: {done_data.get('message')}"}), 500
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Server Error: {str(e)}"}), 500
