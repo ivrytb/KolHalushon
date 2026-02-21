@@ -3,89 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Y24 Turbo Downloader</title>
+    <title>Y24 Cloud Turbo</title>
     <style>
         body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
             text-align: center; 
-            background-color: #1a1a1a; 
-            color: white; 
-            padding: 50px; 
+            background-color: #121212; 
+            color: #e0e0e0; 
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #2d2d2d;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        .card {
+            background: #1e1e1e;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 500px;
         }
+        h1 { color: #4caf50; margin-bottom: 10px; }
+        p { color: #aaa; margin-bottom: 30px; }
         input { 
-            width: 90%; 
-            padding: 12px; 
-            margin: 20px 0; 
-            border-radius: 8px; 
-            border: none; 
-            background: #404040;
+            width: 100%; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+            border-radius: 10px; 
+            border: 1px solid #333; 
+            background: #252525;
             color: white;
-            font-size: 16px;
+            box-sizing: border-box;
+            font-size: 14px;
         }
         button { 
-            padding: 12px 30px; 
-            background-color: #27ae60; 
+            width: 100%;
+            padding: 15px; 
+            background-color: #4caf50; 
             color: white; 
             border: none; 
             cursor: pointer; 
-            border-radius: 8px; 
+            border-radius: 10px; 
             font-size: 18px;
             font-weight: bold;
-            transition: background 0.3s;
+            transition: 0.3s;
         }
-        button:hover { background-color: #2ecc71; }
-        #status { margin-top: 20px; color: #f1c40f; }
+        button:hover { background-color: #45a049; transform: translateY(-2px); }
+        #status { margin-top: 20px; font-size: 14px; color: #f1c40f; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>מוריד Y24 טורבו</h1>
-        <p>הדבק את קישור ה-Cloudfront ולחץ על הורדה</p>
+    <div class="card">
+        <h1>Y24 Cloud Turbo</h1>
+        <p>עקיפת סינון והורדה מהירה בענן</p>
         
-        <input type="text" id="url" placeholder="הדבק כאן את הקישור...">
-        <br>
-        <button onclick="startDownload()">🚀 הורד עכשיו (POST)</button>
+        <input type="text" id="urlInput" placeholder="הדבק כאן את קישור ה-Cloudfront">
+        <button onclick="doDownload()">🚀 התחל הורדה (POST)</button>
         
         <div id="status"></div>
     </div>
 
     <script>
-        function startDownload() {
-            const urlInput = document.getElementById('url').value;
-            if(!urlInput) {
-                alert("נא להזין לינק תקין");
-                return;
-            }
+        function doDownload() {
+            const val = document.getElementById('urlInput').value;
+            if(!val) return alert("נא להדביק לינק");
             
-            document.getElementById('status').innerText = "הבקשה נשלחה ב-POST, ההורדה תתחיל מיד...";
+            document.getElementById('status').innerText = "הבקשה נשלחת... ההורדה תתחיל מיד מבלי לשנות כתובת";
 
-            // יצירת טופס נסתר לשליחת POST
+            // יצירת טופס נסתר כדי להישאר תחת כתובת השורש
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = '/api/download';
+            form.action = '/'; // שולח חזרה לדף הבית
 
-            const hiddenField = document.createElement('input');
-            hiddenField.type = 'hidden';
-            hiddenField.name = 'url';
-            hiddenField.value = urlInput;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'url';
+            input.value = val;
 
-            form.appendChild(hiddenField);
+            form.appendChild(input);
             document.body.appendChild(form);
             form.submit();
             
-            // ניקוי
-            setTimeout(() => {
-                document.body.removeChild(form);
-            }, 100);
+            setTimeout(() => document.body.removeChild(form), 500);
         }
     </script>
 </body>
