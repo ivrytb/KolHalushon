@@ -2,65 +2,68 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Y24 Turbo Downloader</title>
+    <title>Y24 -> Yemot Downloader</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #121212; color: white; text-align: center; padding-top: 50px; }
-        .card { background: #1e1e1e; padding: 30px; border-radius: 15px; display: inline-block; width: 350px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        input { width: 100%; padding: 12px; margin: 20px 0; border-radius: 8px; border: 1px solid #333; background: #252525; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #27ae60; color: white; border: none; cursor: pointer; border-radius: 8px; font-weight: bold; }
-        button:disabled { background: #444; }
-        #status { margin-top: 20px; color: #f1c40f; font-size: 14px; }
+        body { font-family: system-ui, sans-serif; background: #121212; color: #fff; text-align: center; padding: 40px; }
+        .container { background: #1e1e1e; padding: 30px; border-radius: 20px; display: inline-block; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: #2ecc71; margin-bottom: 5px; }
+        p { color: #888; margin-bottom: 25px; font-size: 0.9rem; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; background: #252525; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #444; cursor: not-allowed; }
+        #status { margin-top: 20px; color: #f1c40f; line-height: 1.6; }
+        .success-link { color: #2ecc71; text-decoration: none; font-weight: bold; display: block; margin-top: 10px; border: 1px solid #2ecc71; padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>הורדה עוקפת נטפרי</h2>
-        <input type="text" id="urlInput" placeholder="הדבק לינק כאן">
-        <button id="dlBtn" onclick="runDownload()">🚀 הורד MP3</button>
-        <div id="status"></div>
-    </div>
 
-    <script>
-        async function runDownload() {
-            const url = document.getElementById('urlInput').value;
-            const status = document.getElementById('status');
-            const btn = document.getElementById('dlBtn');
+<div class="container">
+    <h1>Y24 Turbo</h1>
+    <p>הורדה דרך שרתי ימות המשיח</p>
+    
+    <input type="text" id="urlInput" placeholder="הדבק כאן לינק מ-Yiddish24">
+    <button id="mainBtn" onclick="startProcess()">🚀 התחל העברה והורדה</button>
+    
+    <div id="status"></div>
+</div>
 
-            if(!url) return alert("נא להזין לינק");
+<script>
+    async function startProcess() {
+        const url = document.getElementById('urlInput').value;
+        const status = document.getElementById('status');
+        const btn = document.getElementById('mainBtn');
 
-            btn.disabled = true;
-            status.innerText = "מתבצעת הורדה לזיכרון זמני... (נטפרי לא רואה MP3)";
+        if(!url) return alert("אנא הדבק לינק");
 
-            try {
-                const response = await fetch('/api/download', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url })
-                });
+        btn.disabled = true;
+        status.innerHTML = "מעבד קובץ...<br>זה יכול לקחת זמן לקבצים גדולים.<br>מפרק לחלקים ומעלה לימות המשיח...";
 
-                if (!response.ok) throw new Error("החיבור נחסם על ידי הסינון");
+        try {
+            const response = await fetch('/api/upload_to_ym', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            });
 
-                // כאן הקובץ יורד למיקום זמני בזיכרון של הדפדפן
-                const blob = await response.blob();
-                
-                // כאן אנחנו משנים אותו בחזרה ל-MP3 בתוך המחשב שלך
-                const mp3File = new Blob([blob], { type: 'audio/mpeg' });
-                const downloadUrl = window.URL.createObjectURL(mp3File);
-                
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = "y24_audio.mp3"; // המחשב ישמור את זה כ-MP3 תקין לגמרי
-                document.body.appendChild(a);
-                a.click();
-                
-                window.URL.revokeObjectURL(downloadUrl);
-                status.innerText = "הושלם! הקובץ נשמר כ-MP3.";
-            } catch (e) {
-                status.innerHTML = "<span style='color:red'>שגיאה: " + e.message + "</span><br>נסה לשלוח את האתר לבדיקה בנטפרי.";
-            } finally {
-                btn.disabled = false;
+            const result = await response.json();
+
+            if (result.status === "success") {
+                status.innerHTML = `
+                    <span style="color:#2ecc71">הקובץ מוכן!</span><br>
+                    ההורדה תתחיל מיד. אם לא התחילה:<br>
+                    <a href="${result.download_url}" class="success-link">לחץ כאן להורדה ישירה</a>
+                `;
+                window.location.href = result.download_url;
+            } else {
+                throw new Error(result.error || "תקלה לא ידועה");
             }
+        } catch (e) {
+            status.innerHTML = `<span style="color:#e74c3c">שגיאה: ${e.message}</span>`;
+        } finally {
+            btn.disabled = false;
         }
-    </script>
+    }
+</script>
+
 </body>
 </html>
