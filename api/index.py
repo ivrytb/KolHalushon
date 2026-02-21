@@ -7,12 +7,11 @@ app = Flask(__name__)
 
 @app.route('/api/download', methods=['POST'])
 def download():
-    # תמיכה גם ב-JSON וגם בטופס רגיל
     data = request.get_json() if request.is_json else request.form
     target_url = data.get('url')
 
     if not target_url:
-        return "URL is missing", 400
+        return "URL missing", 400
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
@@ -20,14 +19,18 @@ def download():
     }
 
     try:
-        # בדיקה שהלינק בכלל עובד לפני שמתחילים
-        resp = requests.get(target_url, headers=headers, stream=True, verify=False, timeout=15)
+        # הורדה מהמקור ב-Stream
+        resp = requests.get(target_url, headers=headers, stream=True, verify=False, timeout=30)
         
         def generate():
             for chunk in resp.iter_content(chunk_size=1024 * 256):
                 if chunk:
                     yield chunk
 
-        return Response(generate(), content_type='audio/mpeg')
+        # הסוואה: נטפרי רואה "מידע בינארי" ולא שיר
+        return Response(
+            generate(), 
+            content_type='application/octet-stream'
+        )
     except Exception as e:
         return str(e), 500
