@@ -2,7 +2,7 @@ from flask import Flask, request, Response
 import requests
 import urllib3
 
-# ביטול אזהרות SSL בטרמינל של השרת
+# זה המקבילה ל- "curl -k" - ביטול אזהרות SSL בשרת
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
@@ -14,27 +14,27 @@ def download():
         return "קישור חסר", 400
 
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
         'Referer': 'https://www.yiddish24.com/'
     }
 
     try:
-        # השרת מוריד ללא בדיקת תעודה כדי למנוע תקלות מקומיות
-        req = requests.get(url, headers=headers, stream=True, verify=False, timeout=15)
+        # כאן אנחנו מבצעים את ההורדה מהאתר המקורי (בדיוק כמו ה-CURL שעבד לך)
+        req = requests.get(url, headers=headers, stream=True, verify=False, timeout=30)
         
         def generate():
-            # שליחת חתיכות קטנות של 128KB - אידיאלי למעבר חלק בנטפרי
-            for chunk in req.iter_content(chunk_size=128 * 1024):
+            for chunk in req.iter_content(chunk_size=1024 * 1024): # מנות של 1MB
                 if chunk:
                     yield chunk
 
+        # שליחת הקובץ אליך למחשב
         return Response(
-        generate(),
-        content_type='application/octet-stream',
-        headers={
-            "Content-Disposition": "attachment; filename=y24_file.pdf"
-        }
-    )
-        
+            generate(),
+            content_type='audio/mpeg',
+            headers={
+                "Content-Disposition": "attachment; filename=music_file.mp3",
+                "Content-Transfer-Encoding": "binary" # עוזר לנטפרי להבין שזה קובץ להעברה
+            }
+        )
     except Exception as e:
-        return f"שגיאה בשרת: {str(e)}", 500
+        return f"Error: {str(e)}", 500
