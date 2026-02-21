@@ -2,67 +2,48 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Y24 Cloud Direct</title>
+    <title>Y24 Cloud Downloader</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #1a1a1a; color: white; text-align: center; padding-top: 50px; }
-        .box { background: #262626; padding: 30px; border-radius: 12px; display: inline-block; width: 90%; max-width: 400px; }
-        input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #333; color: white; box-sizing: border-box; margin-bottom: 20px; }
-        button { width: 100%; padding: 12px; background: #27ae60; color: white; border: none; cursor: pointer; border-radius: 6px; font-weight: bold; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        #status { margin-top: 20px; font-size: 0.9rem; line-height: 1.5; }
-        .error { color: #ff6b6b; }
-        .success { color: #2ecc71; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding-top: 50px; }
+        .box { background: #262626; padding: 30px; border-radius: 12px; display: inline-block; width: 350px; }
+        input { width: 100%; padding: 10px; margin-bottom: 20px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #27ae60; color: white; border: none; cursor: pointer; border-radius: 6px; }
+        #status { margin-top: 20px; color: #f1c40f; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h1>הורדה עוקפת סינון</h1>
-        <input type="text" id="link" placeholder="הדבק לינק של Y24 כאן">
-        <button id="btn" onclick="download()">🚀 התחל הורדה</button>
+        <h2>הורדה דרך ענן</h2>
+        <input type="text" id="link" placeholder="הדבק לינק כאן">
+        <button id="btn" onclick="start()">הורד עכשיו</button>
         <div id="status"></div>
     </div>
 
     <script>
-        async function download() {
+        async function start() {
             const link = document.getElementById('link').value;
-            const btn = document.getElementById('btn');
             const status = document.getElementById('status');
-            
-            if(!link) return alert("נא להזין לינק");
+            if(!link) return;
 
-            btn.disabled = true;
-            status.innerHTML = "מתחבר לשרת...<br>ההורדה תתחיל אוטומטית בסיום.";
-            status.className = "";
-
+            status.innerText = "הורדה החלה... נא להמתין";
             try {
-                const response = await fetch('/', {
+                const response = await fetch('/api/download', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: link })
                 });
 
-                if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(errText || 'השרת החזיר שגיאה');
-                }
+                if (!response.ok) throw new Error(await response.text());
 
-                status.innerHTML = "הקובץ התקבל! מכין להורדה...";
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
-                
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = "yiddish24_audio.mp3";
-                document.body.appendChild(a);
+                a.download = "music.mp3";
                 a.click();
-                
-                window.URL.revokeObjectURL(url);
-                status.innerHTML = "<span class='success'>ההורדה הושלמה בהצלחה!</span>";
+                status.innerText = "הושלם!";
             } catch (e) {
-                status.innerHTML = "<span class='error'>שגיאה: " + e.message + "</span>";
-                console.error(e);
-            } finally {
-                btn.disabled = false;
+                status.innerText = "שגיאה: " + e.message;
             }
         }
     </script>
