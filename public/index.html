@@ -2,43 +2,64 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Y24 Cloud Turbo</title>
+    <title>Y24 Cloud Direct</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #121212; color: white; padding: 50px; }
-        .card { background: #222; padding: 30px; border-radius: 15px; display: inline-block; }
-        input { width: 350px; padding: 10px; border-radius: 5px; border: 1px solid #444; background: #333; color: white; }
-        button { padding: 10px 25px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        #status { margin-top: 15px; color: #f1c40f; }
+        body { font-family: system-ui; background: #111; color: white; text-align: center; padding-top: 100px; }
+        .box { background: #222; padding: 40px; border-radius: 15px; display: inline-block; width: 400px; }
+        input { width: 90%; padding: 10px; border-radius: 5px; border: none; margin: 20px 0; }
+        button { padding: 12px 30px; background: #27ae60; color: white; border: none; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        #progress { margin-top: 20px; color: #f1c40f; display: none; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h1>Y24 Turbo Cloud</h1>
-        <input type="text" id="urlInput" placeholder="הדבק לינק של Cloudfront">
+    <div class="box">
+        <h1>הורדה ישירה ללא ניתוב</h1>
+        <input type="text" id="link" placeholder="הדבק לינק של Cloudfront">
         <br>
-        <button onclick="start()">🚀 הורד עכשיו</button>
-        <div id="status"></div>
+        <button id="btn" onclick="download()">הורד עכשיו</button>
+        <div id="progress">מתבצעת הורדה לזיכרון הדפדפן... נא להמתין.</div>
     </div>
 
     <script>
-        function start() {
-            const val = document.getElementById('urlInput').value;
-            if(!val) return alert("הכנס לינק");
+        async function download() {
+            const link = document.getElementById('link').value;
+            if(!link) return;
+
+            const btn = document.getElementById('btn');
+            const prog = document.getElementById('progress');
             
-            document.getElementById('status').innerText = "שולח בקשת POST לענן...";
+            btn.disabled = true;
+            prog.style.display = 'block';
 
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/download'; // הנתיב החדש שהגדרנו ב-vercel.json
+            try {
+                // שליחת בקשה לשרת ללא שינוי ה-URL של הדף
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: link })
+                });
 
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'url';
-            input.value = val;
+                if (!response.ok) throw new Error('Download failed');
 
-            form.appendChild(input);
-            document.body.appendChild(form);
-            form.submit();
+                // המרת התגובה לקובץ (Blob) בתוך הזיכרון
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                
+                // יצירת לינק זמני להורדה למחשב
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "y24_audio.mp3";
+                document.body.appendChild(a);
+                a.click();
+                
+                // ניקוי
+                window.URL.revokeObjectURL(url);
+                prog.innerText = "ההורדה הושלמה!";
+            } catch (e) {
+                prog.innerText = "שגיאה: " + e.message;
+            } finally {
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
