@@ -1,21 +1,92 @@
-function startDownload() {
-    const url = document.getElementById('url').value;
-    if(!url) return alert("נא להזין לינק");
-    
-    document.getElementById('status').innerText = "ההורדה מתחילה בשיטת POST מאובטחת...";
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Y24 Turbo Downloader</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            background-color: #1a1a1a; 
+            color: white; 
+            padding: 50px; 
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #2d2d2d;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        input { 
+            width: 90%; 
+            padding: 12px; 
+            margin: 20px 0; 
+            border-radius: 8px; 
+            border: none; 
+            background: #404040;
+            color: white;
+            font-size: 16px;
+        }
+        button { 
+            padding: 12px 30px; 
+            background-color: #27ae60; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 8px; 
+            font-size: 18px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #2ecc71; }
+        #status { margin-top: 20px; color: #f1c40f; }
+    </style>
+</head>
+<body>
 
-    // יצירת טופס זמני ושליחתו
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/api/download';
+    <div class="container">
+        <h1>מוריד Y24 טורבו</h1>
+        <p>הדבק את קישור ה-Cloudfront ולחץ על הורדה</p>
+        
+        <input type="text" id="url" placeholder="הדבק כאן את הקישור...">
+        <br>
+        <button onclick="startDownload()">🚀 הורד עכשיו (POST)</button>
+        
+        <div id="status"></div>
+    </div>
 
-    const hiddenField = document.createElement('input');
-    hiddenField.type = 'hidden';
-    hiddenField.name = 'url';
-    hiddenField.value = url;
+    <script>
+        function startDownload() {
+            const urlInput = document.getElementById('url').value;
+            if(!urlInput) {
+                alert("נא להזין לינק תקין");
+                return;
+            }
+            
+            document.getElementById('status').innerText = "הבקשה נשלחה ב-POST, ההורדה תתחיל מיד...";
 
-    form.appendChild(hiddenField);
-    document.body.appendChild(form);
-    form.submit(); // כאן קורה הקסם
-    document.body.removeChild(form);
-}
+            // יצירת טופס נסתר לשליחת POST
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/api/download';
+
+            const hiddenField = document.createElement('input');
+            hiddenField.type = 'hidden';
+            hiddenField.name = 'url';
+            hiddenField.value = urlInput;
+
+            form.appendChild(hiddenField);
+            document.body.appendChild(form);
+            form.submit();
+            
+            // ניקוי
+            setTimeout(() => {
+                document.body.removeChild(form);
+            }, 100);
+        }
+    </script>
+</body>
+</html>
