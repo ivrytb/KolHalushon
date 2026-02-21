@@ -4,59 +4,63 @@
     <meta charset="UTF-8">
     <title>Y24 Cloud Direct</title>
     <style>
-        body { font-family: system-ui; background: #111; color: white; text-align: center; padding-top: 100px; }
-        .box { background: #222; padding: 40px; border-radius: 15px; display: inline-block; width: 400px; }
-        input { width: 90%; padding: 10px; border-radius: 5px; border: none; margin: 20px 0; }
-        button { padding: 12px 30px; background: #27ae60; color: white; border: none; cursor: pointer; border-radius: 5px; font-weight: bold; }
-        #progress { margin-top: 20px; color: #f1c40f; display: none; }
+        body { font-family: system-ui, sans-serif; background: #1a1a1a; color: white; text-align: center; padding-top: 50px; }
+        .box { background: #262626; padding: 30px; border-radius: 12px; display: inline-block; width: 90%; max-width: 400px; }
+        input { width: 100%; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #333; color: white; box-sizing: border-box; margin-bottom: 20px; }
+        button { width: 100%; padding: 12px; background: #27ae60; color: white; border: none; cursor: pointer; border-radius: 6px; font-weight: bold; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #status { margin-top: 20px; font-size: 0.9rem; line-height: 1.5; }
+        .error { color: #ff6b6b; }
+        .success { color: #2ecc71; }
     </style>
 </head>
 <body>
     <div class="box">
-        <h1>הורדה ישירה ללא ניתוב</h1>
-        <input type="text" id="link" placeholder="הדבק לינק של Cloudfront">
-        <br>
-        <button id="btn" onclick="download()">הורד עכשיו</button>
-        <div id="progress">מתבצעת הורדה לזיכרון הדפדפן... נא להמתין.</div>
+        <h1>הורדה עוקפת סינון</h1>
+        <input type="text" id="link" placeholder="הדבק לינק של Y24 כאן">
+        <button id="btn" onclick="download()">🚀 התחל הורדה</button>
+        <div id="status"></div>
     </div>
 
     <script>
         async function download() {
             const link = document.getElementById('link').value;
-            if(!link) return;
-
             const btn = document.getElementById('btn');
-            const prog = document.getElementById('progress');
+            const status = document.getElementById('status');
             
+            if(!link) return alert("נא להזין לינק");
+
             btn.disabled = true;
-            prog.style.display = 'block';
+            status.innerHTML = "מתחבר לשרת...<br>ההורדה תתחיל אוטומטית בסיום.";
+            status.className = "";
 
             try {
-                // שליחת בקשה לשרת ללא שינוי ה-URL של הדף
                 const response = await fetch('/', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url: link })
                 });
 
-                if (!response.ok) throw new Error('Download failed');
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(errText || 'השרת החזיר שגיאה');
+                }
 
-                // המרת התגובה לקובץ (Blob) בתוך הזיכרון
+                status.innerHTML = "הקובץ התקבל! מכין להורדה...";
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 
-                // יצירת לינק זמני להורדה למחשב
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = "y24_audio.mp3";
+                a.download = "yiddish24_audio.mp3";
                 document.body.appendChild(a);
                 a.click();
                 
-                // ניקוי
                 window.URL.revokeObjectURL(url);
-                prog.innerText = "ההורדה הושלמה!";
+                status.innerHTML = "<span class='success'>ההורדה הושלמה בהצלחה!</span>";
             } catch (e) {
-                prog.innerText = "שגיאה: " + e.message;
+                status.innerHTML = "<span class='error'>שגיאה: " + e.message + "</span>";
+                console.error(e);
             } finally {
                 btn.disabled = false;
             }
