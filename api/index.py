@@ -2,14 +2,13 @@ from flask import Flask, request, Response
 import requests
 import urllib3
 
-# זה המקבילה ל- "curl -k" - ביטול אזהרות SSL בשרת
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 app = Flask(__name__)
 
-@app.route('/api/download')
+@app.route('/api/download', methods=['POST']) # שינוי ל-POST
 def download():
-    url = request.args.get('url')
+    # שליפת ה-URL מגוף הבקשה (Form Data)
+    url = request.form.get('url')
     if not url:
         return "קישור חסר", 400
 
@@ -19,21 +18,18 @@ def download():
     }
 
     try:
-        # כאן אנחנו מבצעים את ההורדה מהאתר המקורי (בדיוק כמו ה-CURL שעבד לך)
         req = requests.get(url, headers=headers, stream=True, verify=False, timeout=30)
         
         def generate():
-            for chunk in req.iter_content(chunk_size=1024 * 1024): # מנות של 1MB
+            for chunk in req.iter_content(chunk_size=256 * 1024):
                 if chunk:
                     yield chunk
 
-        # שליחת הקובץ אליך למחשב
         return Response(
             generate(),
             content_type='audio/mpeg',
             headers={
-                "Content-Disposition": "attachment; filename=music_file.mp3",
-                "Content-Transfer-Encoding": "binary" # עוזר לנטפרי להבין שזה קובץ להעברה
+                "Content-Disposition": "attachment; filename=y24_music.mp3"
             }
         )
     except Exception as e:
