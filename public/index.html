@@ -3,49 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מוריד השיעורים לקול מבשר</title>
+    <title>קול מבשר - הורדה אישית</title>
     <style>
-        :root { --primary: #4361ee; --success: #2ecc71; }
-        body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #e0eafc, #cfdef3); display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 450px; text-align: center; }
-        .input-group { text-align: right; margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input { width: 100%; padding: 12px; border: 2px solid #edf2f7; border-radius: 10px; box-sizing: border-box; }
-        button { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; width: 100%; font-size: 16px; font-weight: bold; margin-top: 10px; }
-        button:disabled { background: #cbd5e0; }
-        #status { margin-top: 25px; min-height: 50px; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: inline-block; }
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --success: #10b981;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --bg: #f3f4f6;
+        }
+
+        body { 
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at top right, #eef2ff, #e0e7ff);
+            display: flex; align-items: center; justify-content: center; 
+            min-height: 100vh; margin: 0; color: var(--text-main);
+        }
+
+        .card { 
+            background: white; padding: 40px; border-radius: 24px; 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%; max-width: 420px; text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.7);
+        }
+
+        .logo-area {
+            font-size: 40px; margin-bottom: 10px;
+        }
+
+        h2 { margin: 0; font-size: 24px; font-weight: 800; color: #111827; }
+        p { margin: 8px 0 30px; font-size: 15px; color: var(--text-sub); }
+
+        .input-group { text-align: right; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #374151; padding-right: 4px; }
+        
+        input { 
+            width: 100%; padding: 14px 16px; border: 1.5px solid #e5e7eb; 
+            border-radius: 12px; box-sizing: border-box; font-size: 15px;
+            transition: all 0.2s ease; background: #f9fafb;
+        }
+
+        input:focus { 
+            border-color: var(--primary); outline: none; background: white;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+        }
+
+        button { 
+            background: var(--primary); color: white; border: none; 
+            padding: 16px; border-radius: 12px; cursor: pointer; 
+            width: 100%; font-size: 16px; font-weight: 700;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-top: 10px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+        }
+
+        button:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3); }
+        button:active { transform: translateY(0); }
+        button:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+
+        #status { margin-top: 30px; font-size: 15px; min-height: 60px; transition: all 0.3s; }
+
+        .loader {
+            border: 3px solid #f3f3f3; border-top: 3px solid var(--primary);
+            border-radius: 50%; width: 24px; height: 24px;
+            animation: spin 0.8s linear infinite; display: inline-block;
+            margin-bottom: 12px;
+        }
+
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .success-btn { display: inline-block; margin-top: 15px; padding: 12px 25px; background: var(--success); color: white; text-decoration: none; border-radius: 8px; font-weight: bold; }
+
+        .success-area {
+            background: #ecfdf5; border-radius: 12px; padding: 15px;
+            border: 1px solid #d1fae5; color: #065f46;
+        }
+
+        .download-link {
+            display: inline-block; margin-top: 12px; padding: 10px 20px;
+            background: var(--success); color: white; text-decoration: none;
+            border-radius: 10px; font-weight: 600; font-size: 14px;
+        }
+
+        .footer-note { margin-top: 20px; font-size: 12px; color: #9ca3af; }
     </style>
 </head>
 <body>
+
     <div class="card">
-        <h2>מוריד השיעורים</h2>
+        <div class="logo-area">🎙️</div>
+        <h2>הורדה מקול מבשר</h2>
+        <p>המרת שיעורים והורדה מהירה</p>
+        
         <div class="input-group">
-            <label>לינק לקובץ:</label>
-            <input type="text" id="urlInput" placeholder="הדבק לינק כאן...">
+            <label>🔗 לינק לשיעור (MP3)</label>
+            <input type="text" id="urlInput" placeholder="הדבק את הכתובת כאן...">
         </div>
-        <div class="input-group">
-            <label>שם הקובץ לשמירה במחשב:</label>
-            <input type="text" id="nameInput" placeholder="למשל: שיעור_יומי">
-        </div>
-        <button id="mainBtn" onclick="startProcess()">הורד עכשיו</button>
+
+        <button id="mainBtn" onclick="startProcess()">התחל הורדה</button>
+        
         <div id="status"></div>
+
+        <div class="footer-note">הקובץ מומר לפורמט WAV איכותי</div>
     </div>
 
     <script>
         async function startProcess() {
             const url = document.getElementById('urlInput').value;
-            let customName = document.getElementById('nameInput').value.trim() || "lesson";
             const status = document.getElementById('status');
             const btn = document.getElementById('mainBtn');
 
-            if(!url) return alert("נא להדביק לינק");
-            customName = customName.replace(/[<>:"/\\|?*]/g, '');
+            if(!url) {
+                status.innerHTML = '<span style="color:#ef4444">נא להדביק לינק תקין</span>';
+                return;
+            }
 
             btn.disabled = true;
-            status.innerHTML = '<div class="loader"></div><br>מעבד... נא להמתין.';
+            status.innerHTML = '<div class="loader"></div><br><span style="color:#4b5563">מעבד את השיעור בימות המשיח...</span>';
 
             try {
                 const response = await fetch('/api/upload_to_ym', {
@@ -57,23 +129,27 @@
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    status.innerHTML = `<span style="color:var(--success); font-weight:bold;">הקובץ מוכן!</span><br>ההורדה תתחיל כעת.`;
+                    status.innerHTML = `
+                        <div class="success-area">
+                            <b>✅ העיבוד הושלם!</b><br>
+                            ההורדה תתחיל באופן אוטומטי.
+                            <br>
+                            <a href="${result.download_url}" class="download-link">לחץ כאן להורדה ידנית</a>
+                        </div>
+                    `;
                     
                     const a = document.createElement('a');
                     a.href = result.download_url;
-                    a.download = customName + ".wav"; // ניסיון לקביעת שם
                     document.body.appendChild(a);
-                    
                     setTimeout(() => {
                         a.click();
                         document.body.removeChild(a);
-                        status.innerHTML += `<br><a href="${result.download_url}" download="${customName}.wav" class="success-btn">לחץ כאן אם לא ירד</a>`;
-                    }, 2000);
+                    }, 1000);
                 } else {
                     throw new Error(result.error);
                 }
             } catch (e) {
-                status.innerHTML = `<span style="color:red">שגיאה: ${e.message}</span>`;
+                status.innerHTML = `<span style="color:#ef4444; font-weight:600;">שגיאה: ${e.message}</span>`;
             } finally {
                 btn.disabled = false;
             }
