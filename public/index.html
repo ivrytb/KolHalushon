@@ -3,35 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Y24 To Yemot</title>
+    <title>מוריד השיעורים</title>
     <style>
-        body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f4f4f9; margin: 0; }
-        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
-        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; }
-        button:disabled { background: #bdc3c7; }
-        #status { margin-top: 20px; font-size: 14px; color: #555; line-height: 1.5; }
-        .success-link { display: inline-block; margin-top: 15px; padding: 10px; background: #2ecc71; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; }
+        :root {
+            --primary: #4361ee;
+            --success: #2ecc71;
+            --bg: #f8f9fa;
+        }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #e0eafc, #cfdef3);
+            display: flex; align-items: center; justify-content: center; 
+            height: 100vh; margin: 0; 
+        }
+        .card { 
+            background: white; padding: 30px; border-radius: 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            width: 100%; max-width: 450px; text-align: center;
+        }
+        h2 { color: #2c3e50; margin-bottom: 5px; }
+        p { color: #7f8c8d; font-size: 14px; margin-bottom: 25px; }
+        
+        .input-group { text-align: right; margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #34495e; }
+        
+        input { 
+            width: 100%; padding: 12px; border: 2px solid #edf2f7; 
+            border-radius: 10px; box-sizing: border-box; font-size: 15px;
+            transition: border-color 0.3s;
+        }
+        input:focus { border-color: var(--primary); outline: none; }
+        
+        button { 
+            background: var(--primary); color: white; border: none; 
+            padding: 15px; border-radius: 10px; cursor: pointer; 
+            width: 100%; font-size: 16px; font-weight: bold;
+            transition: transform 0.2s, background 0.3s;
+            margin-top: 10px;
+        }
+        button:hover { background: #3730a3; transform: translateY(-2px); }
+        button:disabled { background: #cbd5e0; transform: none; cursor: not-allowed; }
+        
+        #status { margin-top: 25px; font-size: 15px; min-height: 50px; }
+        
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid var(--primary);
+            border-radius: 50%; width: 30px; height: 30px;
+            animation: spin 1s linear infinite; display: inline-block;
+            margin-bottom: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .success-btn {
+            display: inline-block; margin-top: 15px; padding: 12px 25px;
+            background: var(--success); color: white; text-decoration: none;
+            border-radius: 8px; font-weight: bold; animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>הורדת שיעורים מ-Y24</h2>
-        <input type="text" id="urlInput" placeholder="הדבק כאן את לינק ה-MP3...">
-        <button id="mainBtn" onclick="startProcess()">התחל תהליך</button>
+        <h2>מוריד השיעורים</h2>
+        <p>הורדה מקול מבשר וכל מקור שמע אחר</p>
+        
+        <div class="input-group">
+            <label>לינק לקובץ (MP3/WAV):</label>
+            <input type="text" id="urlInput" placeholder="הדבק כאן את הלינק...">
+        </div>
+
+        <div class="input-group">
+            <label>איך לקרוא לקובץ במחשב?</label>
+            <input type="text" id="nameInput" placeholder="למשל: שיעור_חומש_תצוה">
+        </div>
+
+        <button id="mainBtn" onclick="startProcess()">הורד עכשיו</button>
+        
         <div id="status"></div>
     </div>
 
     <script>
         async function startProcess() {
             const url = document.getElementById('urlInput').value;
+            let customName = document.getElementById('nameInput').value.trim();
             const status = document.getElementById('status');
             const btn = document.getElementById('mainBtn');
 
             if(!url) return alert("אנא הדבק לינק");
+            if(!customName) customName = "Lesson_" + Math.floor(Date.now() / 1000);
 
             btn.disabled = true;
-            status.innerHTML = "מוריד מ-Yiddish24 ומעלה לימות...<br>זה עשוי לקחת דקה, נא לא לסגור.";
+            status.innerHTML = '<div class="loader"></div><br>מעבד את הקובץ בימות המשיח...<br>נא לא לסגור את הדף.';
 
             try {
                 const response = await fetch('/api/upload_to_ym', {
@@ -43,21 +105,26 @@
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    status.innerHTML = `<span style="color:#2ecc71; font-weight:bold;">ההעלאה הסתיימה בהצלחה!</span><br>ההורדה תתחיל בעוד רגע...`;
+                    status.innerHTML = `<span style="color:var(--success); font-weight:bold;">הקובץ מוכן!</span><br>מבצע שמירה בשם...`;
                     
-                    // יצירת אלמנט הורדה למניעת חסימות
+                    // יצירת אלמנט הורדה עם השם שהמשתמש בחר
                     const downloadLink = document.createElement('a');
                     downloadLink.href = result.download_url;
-                    downloadLink.setAttribute('download', '');
+                    
+                    // כאן אנחנו קובעים את השם שהמשתמש בחר
+                    downloadLink.setAttribute('download', customName + ".wav");
                     document.body.appendChild(downloadLink);
                     
                     setTimeout(() => {
                         downloadLink.click();
                         document.body.removeChild(downloadLink);
-                        status.innerHTML += `<br><br><a href="${result.download_url}" class="success-link">לחץ כאן אם ההורדה לא התחילה</a>`;
-                    }, 3000); // מחכים 3 שניות שקובץ ה-WAV יהיה מוכן סופית
+                        status.innerHTML = `
+                            <span style="color:var(--success);">ההורדה התחילה!</span><br>
+                            <a href="${result.download_url}" download="${customName}.wav" class="success-btn">לחץ כאן לשמירה ידנית</a>
+                        `;
+                    }, 2000);
                 } else {
-                    throw new Error(result.error || "שגיאה לא ידועה");
+                    throw new Error(result.error || "שגיאה בתהליך");
                 }
             } catch (e) {
                 status.innerHTML = `<span style="color:#e74c3c">שגיאה: ${e.message}</span>`;
