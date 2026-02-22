@@ -2,68 +2,69 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Y24 -> Yemot Downloader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Y24 To Yemot</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #121212; color: #fff; text-align: center; padding: 40px; }
-        .container { background: #1e1e1e; padding: 30px; border-radius: 20px; display: inline-block; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h1 { color: #2ecc71; margin-bottom: 5px; }
-        p { color: #888; margin-bottom: 25px; font-size: 0.9rem; }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; background: #252525; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 14px; background: #27ae60; color: white; border: none; border-radius: 8px; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
-        button:disabled { background: #444; cursor: not-allowed; }
-        #status { margin-top: 20px; color: #f1c40f; line-height: 1.6; }
-        .success-link { color: #2ecc71; text-decoration: none; font-weight: bold; display: block; margin-top: 10px; border: 1px solid #2ecc71; padding: 10px; border-radius: 5px; }
+        body { font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #f4f4f9; margin: 0; }
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; }
+        button:disabled { background: #bdc3c7; }
+        #status { margin-top: 20px; font-size: 14px; color: #555; line-height: 1.5; }
+        .success-link { display: inline-block; margin-top: 15px; padding: 10px; background: #2ecc71; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; }
     </style>
 </head>
 <body>
+    <div class="card">
+        <h2>הורדת שיעורים מ-Y24</h2>
+        <input type="text" id="urlInput" placeholder="הדבק כאן את לינק ה-MP3...">
+        <button id="mainBtn" onclick="startProcess()">התחל תהליך</button>
+        <div id="status"></div>
+    </div>
 
-<div class="container">
-    <h1>Y24 Turbo</h1>
-    <p>הורדה דרך שרתי ימות המשיח</p>
-    
-    <input type="text" id="urlInput" placeholder="הדבק כאן לינק מ-Yiddish24">
-    <button id="mainBtn" onclick="startProcess()">🚀 התחל העברה והורדה</button>
-    
-    <div id="status"></div>
-</div>
+    <script>
+        async function startProcess() {
+            const url = document.getElementById('urlInput').value;
+            const status = document.getElementById('status');
+            const btn = document.getElementById('mainBtn');
 
-<script>
-    async function startProcess() {
-        const url = document.getElementById('urlInput').value;
-        const status = document.getElementById('status');
-        const btn = document.getElementById('mainBtn');
+            if(!url) return alert("אנא הדבק לינק");
 
-        if(!url) return alert("אנא הדבק לינק");
+            btn.disabled = true;
+            status.innerHTML = "מוריד מ-Yiddish24 ומעלה לימות...<br>זה עשוי לקחת דקה, נא לא לסגור.";
 
-        btn.disabled = true;
-        status.innerHTML = "מעבד קובץ...<br>זה יכול לקחת זמן לקבצים גדולים.<br>מפרק לחלקים ומעלה לימות המשיח...";
+            try {
+                const response = await fetch('/api/upload_to_ym', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
 
-        try {
-            const response = await fetch('/api/upload_to_ym', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url })
-            });
+                const result = await response.json();
 
-            const result = await response.json();
-
-            if (result.status === "success") {
-                status.innerHTML = `
-                    <span style="color:#2ecc71">הקובץ מוכן!</span><br>
-                    ההורדה תתחיל מיד. אם לא התחילה:<br>
-                    <a href="${result.download_url}" class="success-link">לחץ כאן להורדה ישירה</a>
-                `;
-                window.location.href = result.download_url;
-            } else {
-                throw new Error(result.error || "תקלה לא ידועה");
+                if (result.status === "success") {
+                    status.innerHTML = `<span style="color:#2ecc71; font-weight:bold;">ההעלאה הסתיימה בהצלחה!</span><br>ההורדה תתחיל בעוד רגע...`;
+                    
+                    // יצירת אלמנט הורדה למניעת חסימות
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = result.download_url;
+                    downloadLink.setAttribute('download', '');
+                    document.body.appendChild(downloadLink);
+                    
+                    setTimeout(() => {
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                        status.innerHTML += `<br><br><a href="${result.download_url}" class="success-link">לחץ כאן אם ההורדה לא התחילה</a>`;
+                    }, 3000); // מחכים 3 שניות שקובץ ה-WAV יהיה מוכן סופית
+                } else {
+                    throw new Error(result.error || "שגיאה לא ידועה");
+                }
+            } catch (e) {
+                status.innerHTML = `<span style="color:#e74c3c">שגיאה: ${e.message}</span>`;
+            } finally {
+                btn.disabled = false;
             }
-        } catch (e) {
-            status.innerHTML = `<span style="color:#e74c3c">שגיאה: ${e.message}</span>`;
-        } finally {
-            btn.disabled = false;
         }
-    }
-</script>
-
+    </script>
 </body>
 </html>
