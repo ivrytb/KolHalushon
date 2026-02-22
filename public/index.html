@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מוריד השיעורים</title>
+    <title>מוריד השיעורים לקול מבשר</title>
     <style>
         :root {
             --primary: #4361ee;
@@ -19,21 +19,18 @@
         .card { 
             background: white; padding: 30px; border-radius: 20px; 
             box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
-            width: 100%; max-width: 450px; text-align: center;
+            width: 90%; max-width: 450px; text-align: center;
         }
         h2 { color: #2c3e50; margin-bottom: 5px; }
         p { color: #7f8c8d; font-size: 14px; margin-bottom: 25px; }
-        
         .input-group { text-align: right; margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #34495e; }
-        
         input { 
             width: 100%; padding: 12px; border: 2px solid #edf2f7; 
             border-radius: 10px; box-sizing: border-box; font-size: 15px;
             transition: border-color 0.3s;
         }
         input:focus { border-color: var(--primary); outline: none; }
-        
         button { 
             background: var(--primary); color: white; border: none; 
             padding: 15px; border-radius: 10px; cursor: pointer; 
@@ -43,9 +40,7 @@
         }
         button:hover { background: #3730a3; transform: translateY(-2px); }
         button:disabled { background: #cbd5e0; transform: none; cursor: not-allowed; }
-        
         #status { margin-top: 25px; font-size: 15px; min-height: 50px; }
-        
         .loader {
             border: 4px solid #f3f3f3; border-top: 4px solid var(--primary);
             border-radius: 50%; width: 30px; height: 30px;
@@ -53,7 +48,6 @@
             margin-bottom: 10px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         .success-btn {
             display: inline-block; margin-top: 15px; padding: 12px 25px;
             background: var(--success); color: white; text-decoration: none;
@@ -92,8 +86,11 @@
             if(!url) return alert("אנא הדבק לינק");
             if(!customName) customName = "Lesson_" + Math.floor(Date.now() / 1000);
 
+            // ניקוי תווים אסורים לשמות קבצים
+            customName = customName.replace(/[<>:"/\\|?*]/g, '');
+
             btn.disabled = true;
-            status.innerHTML = '<div class="loader"></div><br>מעבד את הקובץ בימות המשיח...<br>נא לא לסגור את הדף.';
+            status.innerHTML = '<div class="loader"></div><br>מעבד את הקובץ...<br>זה עשוי לקחת דקה, נא לא לסגור.';
 
             try {
                 const response = await fetch('/api/upload_to_ym', {
@@ -105,14 +102,13 @@
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    status.innerHTML = `<span style="color:var(--success); font-weight:bold;">הקובץ מוכן!</span><br>מבצע שמירה בשם...`;
+                    status.innerHTML = `<span style="color:var(--success); font-weight:bold;">הקובץ מוכן!</span><br>מכין הורדה בשם שבחרת...`;
                     
-                    // יצירת אלמנט הורדה עם השם שהמשתמש בחר
+                    // שימוש בנתיב ה-proxy כדי לאפשר שם קובץ מותאם אישית
+                    const proxyUrl = `/api/proxy_download?url=${encodeURIComponent(result.download_url)}&name=${encodeURIComponent(customName)}`;
+                    
                     const downloadLink = document.createElement('a');
-                    downloadLink.href = result.download_url;
-                    
-                    // כאן אנחנו קובעים את השם שהמשתמש בחר
-                    downloadLink.setAttribute('download', customName + ".wav");
+                    downloadLink.href = proxyUrl;
                     document.body.appendChild(downloadLink);
                     
                     setTimeout(() => {
@@ -120,7 +116,7 @@
                         document.body.removeChild(downloadLink);
                         status.innerHTML = `
                             <span style="color:var(--success);">ההורדה התחילה!</span><br>
-                            <a href="${result.download_url}" download="${customName}.wav" class="success-btn">לחץ כאן לשמירה ידנית</a>
+                            <a href="${proxyUrl}" class="success-btn">לחץ כאן לשמירה ידנית</a>
                         `;
                     }, 2000);
                 } else {
