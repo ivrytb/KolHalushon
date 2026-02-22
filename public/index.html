@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הורדת שיעורים | פרימיום</title>
+    <title>מוריד השיעורים האישי</title>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -11,7 +11,7 @@
             --primary-dark: #4f46e5;
             --accent: #f43f5e;
             --success: #10b981;
-            --glass: rgba(255, 255, 255, 0.9);
+            --glass: rgba(255, 255, 255, 0.92);
         }
 
         body { 
@@ -21,10 +21,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* רקע מונפש בומבסטי */
-            background: linear-gradient(-45deg, #eef2ff, #e0e7ff, #f5f3ff, #ede9fe);
+            background: linear-gradient(-45deg, #f8fafc, #e2e8f0, #f1f5f9, #cbd5e1);
             background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
+            animation: gradient 12s ease infinite;
             overflow: hidden;
         }
 
@@ -36,41 +35,45 @@
 
         .card { 
             background: var(--glass);
-            backdrop-filter: blur(10px);
-            padding: 45px;
-            border-radius: 30px; 
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(15px);
+            padding: 50px 40px;
+            border-radius: 35px; 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
             width: 90%;
-            max-width: 440px;
+            max-width: 460px;
             text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.6);
             position: relative;
         }
 
         .icon-box {
-            width: 70px; height: 70px;
-            background: white;
-            border-radius: 20px;
+            width: 80px; height: 80px;
+            background: linear-gradient(135deg, #6366f1, #a855f7);
+            border-radius: 24px;
             display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 32px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            margin: 0 auto 25px;
+            font-size: 36px;
+            color: white;
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
         }
 
         h2 { 
             margin: 0; 
-            font-size: 32px; 
+            font-size: 34px; 
             font-weight: 800; 
             color: #1e1b4b; 
-            letter-spacing: -0.5px;
+            line-height: 1.2;
         }
 
         .sub-title { 
-            margin: 10px 0 35px; 
-            font-size: 17px; 
-            font-weight: 400;
-            color: #4338ca;
-            opacity: 0.8;
+            margin: 12px 0 35px; 
+            font-size: 18px; 
+            font-weight: 600;
+            color: #4f46e5;
+            background: rgba(79, 70, 229, 0.1);
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 12px;
         }
 
         .input-wrapper {
@@ -81,22 +84,22 @@
 
         label {
             display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 14px;
-            color: #312e81;
-            margin-right: 5px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            font-size: 15px;
+            color: #334155;
+            margin-right: 8px;
         }
 
         input { 
             width: 100%; 
-            padding: 16px 20px; 
+            padding: 18px 22px; 
             border: 2px solid transparent;
-            border-radius: 18px; 
+            border-radius: 20px; 
             box-sizing: border-box; 
             font-size: 16px;
             background: #fff;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             font-family: inherit;
         }
@@ -104,19 +107,19 @@
         input:focus { 
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.2);
-            transform: translateY(-2px);
+            box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.15);
+            background: white;
         }
 
         button { 
-            background: var(--primary);
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
             color: white;
             border: none; 
-            padding: 18px;
-            border-radius: 18px; 
+            padding: 20px;
+            border-radius: 20px; 
             cursor: pointer; 
             width: 100%; 
-            font-size: 18px; 
+            font-size: 19px; 
             font-weight: 800;
             font-family: inherit;
             transition: all 0.3s ease;
@@ -124,9 +127,8 @@
         }
 
         button:hover { 
-            background: var(--primary-dark);
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 20px 25px -5px rgba(99, 102, 241, 0.5);
+            transform: translateY(-3px);
+            box-shadow: 0 20px 30px -10px rgba(99, 102, 241, 0.5);
         }
 
         button:active { transform: translateY(-1px); }
@@ -134,62 +136,58 @@
 
         #status { 
             margin-top: 30px;
-            min-height: 80px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            min-height: 90px;
         }
 
-        /* אנימציית טעינה מתקדמת */
         .spinner {
             width: 35px; height: 35px;
-            border: 4px solid #e0e7ff;
+            border: 4px solid #f1f5f9;
             border-top: 4px solid var(--primary);
             border-radius: 50%;
-            animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
         }
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .success-card {
-            background: #f0fdf4;
-            color: #166534;
-            padding: 15px 25px;
-            border-radius: 15px;
-            border: 1px solid #bbf7d0;
-            font-weight: 600;
-            animation: slideIn 0.5s ease;
+            background: #ecfdf5;
+            color: #065f46;
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid #a7f3d0;
+            font-weight: 700;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
         .download-btn {
             background: var(--success);
             color: white;
             text-decoration: none;
-            padding: 10px 20px;
-            border-radius: 12px;
+            padding: 12px 25px;
+            border-radius: 15px;
             display: inline-block;
             margin-top: 15px;
-            font-size: 14px;
-            transition: opacity 0.2s;
+            font-size: 15px;
+            transition: background 0.2s;
         }
         
-        .download-btn:hover { opacity: 0.9; }
+        .download-btn:hover { background: #059669; }
 
     </style>
 </head>
 <body>
 
     <div class="card">
-        <div class="icon-box">📂</div>
-        <h2>הורדת שיעורים</h2>
-        <div class="sub-title">המרת שיעורים למערכת ימות המשיח</div>
+        <div class="icon-box">⚡</div>
+        <h2>הורדת שיעורים למחשב האישי</h2>
+        <div class="sub-title">עם העתקה למערכת ימות המשיח</div>
         
         <div class="input-wrapper">
             <label>הדבק לינק לשיעור</label>
-            <input type="text" id="urlInput" placeholder="https://..." spellcheck="false">
+            <input type="text" id="urlInput" placeholder="הדבק כאן את הכתובת..." spellcheck="false">
         </div>
 
         <button id="mainBtn" onclick="startProcess()">התחל הורדה</button>
@@ -206,7 +204,7 @@
             if(!url) return alert("אנא הזן לינק תקין");
 
             btn.disabled = true;
-            status.innerHTML = '<div class="spinner"></div><p style="color:#4338ca; font-weight:600;">מבצע המרה ועיבוד...</p>';
+            status.innerHTML = '<div class="spinner"></div><p style="color:#4f46e5; font-weight:700;">מבצע העתקה למערכת ימות המשיח...</p>';
 
             try {
                 const response = await fetch('/api/upload_to_ym', {
@@ -220,9 +218,9 @@
                 if (result.status === "success") {
                     status.innerHTML = `
                         <div class="success-card">
-                            ✨ העיבוד הושלם בהצלחה!
+                            ✨ העיבוד הושלם! הקובץ מוכן.
                             <br>
-                            <a href="${result.download_url}" class="download-btn">להורדה ידנית לחץ כאן</a>
+                            <a href="${result.download_url}" class="download-btn">להורדה מיידית למחשב</a>
                         </div>
                     `;
                     
@@ -237,7 +235,7 @@
                     throw new Error(result.error);
                 }
             } catch (e) {
-                status.innerHTML = `<p style="color:#ef4444; font-weight:600;">❌ שגיאה: ${e.message}</p>`;
+                status.innerHTML = `<p style="color:#e11d48; font-weight:700;">❌ שגיאה: ${e.message}</p>`;
             } finally {
                 btn.disabled = false;
             }
