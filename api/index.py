@@ -38,23 +38,26 @@ def upload_to_ym():
         filename = f"{numeric_name}.wav"
         dest_path = f"ivr2:KolMevaser/{filename}"
 
-        # 2. הורדה מ-Y24 (עקיפת 403)
+        # 2. הורדה מ-Y24 עם תחפושת דפדפן מלאה
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'he-IL,he;q=0.9,en-US;q=0.8,en;q=0.7',
             'Referer': 'https://www.yiddish24.com/',
+            'Origin': 'https://www.yiddish24.com',
             'Range': 'bytes=0-'
         }
+        
         y24_res = requests.get(target_url, headers=headers, timeout=60)
         y24_res.raise_for_status()
 
-        # 3. העלאה לימות המשיח (בבקשה אחת - כפי שהצליח לך)
+        # 3. העלאה לימות המשיח בבקשה אחת
         payload = {
             'token': YM_TOKEN,
             'path': dest_path,
             'convertAudio': '1'
         }
         
-        # השדה 'upload' כפי שמופיע בטופס ה-HTML הרשמי
         files = {
             'upload': (filename, y24_res.content, 'audio/wav')
         }
@@ -66,18 +69,16 @@ def upload_to_ym():
             timeout=120
         )
 
-        # 4. בדיקת הצלחה בצורה גמישה (JSON או טקסט חופשי)
+        # 4. בדיקת הצלחה לפי הפורמט החדש (success: true)
         try:
             res_json = ym_res.json()
-            is_ok = res_json.get('status') == 'success'
+            is_ok = res_json.get('success') is True or res_json.get('status') == 'success'
         except:
-            is_ok = 'success' in ym_res.text.lower()
+            is_ok = 'success":true' in ym_res.text.lower() or 'status":"success' in ym_res.text.lower()
 
         if is_ok:
-            # יצירת הלינק להורדה לפי התיעוד שצירפת
-            # נתיב לדוגמה: ivr2:KolMevaser/1740182400.wav
+            # לינק הורדה ישיר
             download_url = f"https://www.call2all.co.il/ym/api/DownloadFile?token={YM_TOKEN}&path={dest_path}"
-            
             return jsonify({
                 "status": "success",
                 "download_url": download_url
