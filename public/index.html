@@ -1,32 +1,145 @@
-<script>
-    async function startDownload() {
-        // ... (ההתחלה נשארת דומה) ...
-        try {
-            console.log("LOG: Starting process...");
-            // שלב העלאת החלקים
-            for (let i = 0; i < totalParts; i++) {
-                // ... (קוד העלאה) ...
-                const res = await fetch('https://www.call2all.co.il/ym/api/UploadFile', { method: 'POST', body: formData });
-                const resData = await res.json();
-                console.log(`LOG: Chunk ${i} uploaded. Response:`, resData);
-            }
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הורדת שיעורים פרימיום</title>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --p: #6366f1; --s: #10b981; --err: #ef4444; }
+        body { font-family: 'Assistant', sans-serif; background: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 450px; text-align: center; }
+        h2 { color: #1e1b4b; margin-bottom: 5px; }
+        .sub { color: var(--p); margin-bottom: 25px; font-weight: 600; }
+        input { width: 100%; padding: 15px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; box-sizing: border-box; }
+        button { background: var(--p); color: white; border: none; padding: 15px; border-radius: 12px; width: 100%; font-weight: 800; cursor: pointer; font-size: 16px; }
+        button:disabled { background: #cbd5e1; }
+        #status-box { margin-top: 25px; text-align: right; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; display: none; }
+        .log-line { font-size: 12px; color: #64748b; font-family: monospace; border-bottom: 1px solid #f1f5f9; padding: 2px 0; }
+        .progress-bar { height: 8px; background: #e2e8f0; border-radius: 10px; margin: 10px 0; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--p); width: 0%; transition: 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>הורדת שיעורים</h2>
+        <div class="sub">הזרמה ישירה למחשב האישי</div>
+        
+        <input type="text" id="urlInput" placeholder="הדבק לינק מקול מבשר...">
+        <button id="mainBtn" onclick="process()">התחל תהליך</button>
 
-            // שלב הסיום - כאן הוספתי לוג מפורט
-            console.log("LOG: Sending DONE request...");
-            const finalRes = await fetch(`https://www.call2all.co.il/ym/api/UploadFile?done&token=${config.token}&path=ivr2:KolMevaser/${fileName}&qquuid=${uuid}&qqtotalfilesize=${size}&qqtotalparts=${totalParts}&convertAudio=1`);
-            const finalData = await finalRes.json();
-            
-            console.log("LOG: Final response from Yemot:", finalData);
+        <div id="status-box">
+            <div id="main-msg" style="font-weight: 800; margin-bottom: 10px;">ממתין...</div>
+            <div class="progress-bar"><div id="fill" class="progress-fill"></div></div>
+            <div id="logs" style="max-height: 150px; overflow-y: auto;"></div>
+        </div>
+    </div>
 
-            if (finalData.status === 'success' || finalData.success === true) {
-                // הצלחה
-            } else {
-                console.error("LOG: Yemot rejected the union. Message:", finalData.message);
-                throw new Error(finalData.message || 'איחוד הקובץ נכשל');
-            }
-        } catch (e) {
-            console.error("LOG: Error caught:", e);
-            s.innerText = 'שגיאה: ' + e.message;
+    <script>
+        const logsDiv = document.getElementById('logs');
+        const mainMsg = document.getElementById('main-msg');
+        const fill = document.getElementById('fill');
+
+        function addLog(msg, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'log-line';
+            if(isError) div.style.color = 'red';
+            div.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            logsDiv.prepend(div);
+            console.log(msg);
         }
-    }
-</script>
+
+        async function process() {
+            const url = document.getElementById('urlInput').value;
+            if(!url) return alert("נא להזין לינק");
+
+            const btn = document.getElementById('mainBtn');
+            btn.disabled = true;
+            document.getElementById('status-box').style.display = 'block';
+            logsDiv.innerHTML = '';
+            
+            try {
+                addLog("מושך הגדרות שרת...");
+                const confReq = await fetch('/api/get_config');
+                const config = await confReq.json();
+
+                addLog("מתחבר לזרם האודיו מקול מבשר...");
+                const response = await fetch(`/api/stream_audio?url=${encodeURIComponent(url)}`);
+                if(!response.ok) throw new Error("כשלוני בגישה ללינק");
+
+                const reader = response.body.getReader();
+                let chunks = [];
+                let receivedLength = 0;
+
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    receivedLength += value.length;
+                    mainMsg.innerText = `טוען לזיכרון: ${(receivedLength/1024/1024).toFixed(1)}MB`;
+                }
+
+                addLog("הקובץ נטען. מתחיל פיצול והעלאה לימות המשיח...");
+                const blob = new Blob(chunks);
+                const totalSize = blob.size;
+                const uuid = crypto.randomUUID();
+                const fileName = `${Math.floor(Date.now()/1000)}.wav`;
+                const chunkSize = 5 * 1024 * 1024; // 5MB
+                const totalParts = Math.ceil(totalSize / chunkSize);
+
+                for (let i = 0; i < totalParts; i++) {
+                    const start = i * chunkSize;
+                    const end = Math.min(start + chunkSize, totalSize);
+                    const chunk = blob.slice(start, end);
+
+                    const fd = new FormData();
+                    fd.append('token', config.token);
+                    fd.append('path', `ivr2:KolMevaser/${fileName}`);
+                    fd.append('qquuid', uuid);
+                    fd.append('qqpartindex', i);
+                    fd.append('qqpartbyteoffset', start);
+                    fd.append('qqchunksize', chunk.size);
+                    fd.append('qqtotalparts', totalParts);
+                    fd.append('qqtotalfilesize', totalSize);
+                    fd.append('qqfilename', fileName);
+                    fd.append('qqfile', chunk);
+
+                    const upRes = await fetch('https://www.call2all.co.il/ym/api/UploadFile', {
+                        method: 'POST',
+                        body: fd
+                    });
+                    const upData = await upRes.json();
+                    
+                    const pct = Math.round(((i + 1) / totalParts) * 100);
+                    fill.style.width = pct + '%';
+                    mainMsg.innerText = `מעלה לימות: ${pct}%`;
+                    addLog(`חלק ${i+1}/${totalParts} עלה בהצלחה.`);
+                }
+
+                addLog("מבצע פקודת סיום (Done)...");
+                const doneUrl = `https://www.call2all.co.il/ym/api/UploadFile?done&token=${config.token}&path=ivr2:KolMevaser/${fileName}&qquuid=${uuid}&qqtotalfilesize=${totalSize}&qqtotalparts=${totalParts}&convertAudio=1`;
+                
+                const finalRes = await fetch(doneUrl);
+                const finalData = await finalRes.json();
+                addLog("תשובת סיום מימות המשיח: " + JSON.stringify(finalData));
+
+                if(finalData.status === 'success' || finalData.success) {
+                    mainMsg.innerText = "הושלם בהצלחה!";
+                    const dlUrl = `https://www.call2all.co.il/ym/api/DownloadFile?token=${config.token}&path=ivr2:KolMevaser/${fileName}`;
+                    addLog("מוריד קובץ למחשב...");
+                    window.location.href = dlUrl;
+                } else {
+                    throw new Error(finalData.message || "ימות המשיח סירבו לאחד את הקובץ");
+                }
+
+            } catch (e) {
+                addLog("שגיאה קריטית: " + e.message, true);
+                mainMsg.innerText = "התהליך נכשל";
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
