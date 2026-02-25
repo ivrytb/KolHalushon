@@ -2,115 +2,52 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מוריד שיעורים</title>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&display=swap" rel="stylesheet">
+    <title>הורדה ישירה לימות המשיח</title>
     <style>
-        :root { --p: #6366f1; --s: #10b981; }
-        body { font-family: 'Assistant', sans-serif; background: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 40px; border-radius: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 450px; text-align: center; }
-        h2 { color: #1e1b4b; margin: 0; }
-        .sub { color: var(--p); margin-bottom: 25px; font-weight: 600; }
-        input { width: 100%; padding: 15px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; box-sizing: border-box; }
-        button { background: var(--p); color: white; border: none; padding: 18px; border-radius: 12px; width: 100%; font-weight: 800; cursor: pointer; font-size: 18px; }
-        button:disabled { background: #cbd5e1; }
-        #status-box { margin-top: 25px; text-align: right; background: #f8fafc; padding: 20px; border-radius: 15px; border: 1px solid #e2e8f0; display: none; }
-        .progress-bar { height: 10px; background: #e2e8f0; border-radius: 10px; margin: 15px 0; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--p); width: 0%; transition: 0.3s; }
-        .log-line { font-size: 12px; color: #64748b; font-family: monospace; border-bottom: 1px solid #f1f5f9; padding: 4px 0; }
+        body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 400px; }
+        input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { background: #6366f1; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
+        #status { margin-top: 20px; font-size: 14px; color: #555; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>מוריד שיעורים</h2>
-        <div class="sub">העברה לימות המשיח</div>
+        <h2>העברה לימות המשיח</h2>
         <input type="text" id="urlInput" placeholder="הדבק לינק מקול מבשר...">
-        <button id="mainBtn" onclick="process()">התחל תהליך</button>
-        <div id="status-box">
-            <div id="main-msg" style="font-weight: 800;">ממתין...</div>
-            <div class="progress-bar"><div id="fill" class="progress-fill"></div></div>
-            <div id="logs" style="max-height: 150px; overflow-y: auto;"></div>
-        </div>
+        <button onclick="transfer()">התחל העברה</button>
+        <div id="status"></div>
     </div>
 
     <script>
-        const logsDiv = document.getElementById('logs');
-        const mainMsg = document.getElementById('main-msg');
-        const fill = document.getElementById('fill');
-        const btn = document.getElementById('mainBtn');
-
-        function addLog(msg, isErr = false) {
-            const d = document.createElement('div');
-            d.className = 'log-line';
-            if(isErr) d.style.color = 'red';
-            d.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            logsDiv.prepend(d);
-        }
-
-        async function process() {
-            const url = document.getElementById('urlInput').value.trim();
+        async function transfer() {
+            const status = document.getElementById('status');
+            const url = document.getElementById('urlInput').value;
             if(!url) return alert("הזן לינק");
-            btn.disabled = true;
-            document.getElementById('status-box').style.display = 'block';
-            logsDiv.innerHTML = '';
+
+            status.innerText = "מתחבר לשרת...";
+            const conf = await (await fetch('/api/get_config')).json();
+            
+            // הכתובת של השרת שלך שמשמש כפרוקסי
+            const proxyUrl = `https://${conf.host}/api/proxy_audio?url=${encodeURIComponent(url)}`;
+            const fileName = `KM_${Math.floor(Date.now()/1000)}.wav`;
+
+            status.innerText = "שולח הוראה לימות המשיח למשוך את הקובץ...";
+            
+            // כאן אנחנו אומרים לימות המשיח: תורידו מהפרוקסי שלי
+            const ymApi = `https://www.call2all.co.il/ym/api/UploadFile?token=${conf.token}&url=${encodeURIComponent(proxyUrl)}&path=ivr2:KolMevaser/${fileName}&convertAudio=1`;
             
             try {
-                addLog("מושך הגדרות...");
-                const cReq = await fetch('/api/get_config');
-                const config = await cReq.json();
-
-                addLog("מוריד קובץ למחשב (זה עשוי לקחת זמן)...");
-                mainMsg.innerText = "מוריד קובץ מקול מבשר...";
-                const res = await fetch(`/api/stream_audio?url=${encodeURIComponent(url)}`);
-                if(!res.ok) throw new Error(`שגיאת נטפרי/שרת: ${res.status}`);
-
-                const blob = await res.blob();
-                addLog("הקובץ אצלך בזיכרון. מתחיל העלאה לימות המשיח...");
+                const res = await fetch(ymApi);
+                const data = await res.json();
                 
-                const totalSize = blob.size;
-                const uuid = crypto.randomUUID();
-                const fileName = `${Math.floor(Date.now()/1000)}.wav`;
-                const chunkSize = 5 * 1024 * 1024; 
-                const totalParts = Math.ceil(totalSize / chunkSize);
-
-                for (let i = 0; i < totalParts; i++) {
-                    const chunk = blob.slice(i * chunkSize, (i + 1) * chunkSize);
-                    const fd = new FormData();
-                    fd.append('token', config.token);
-                    fd.append('path', `ivr2:KolMevaser/${fileName}`);
-                    fd.append('qquuid', uuid);
-                    fd.append('qqpartindex', i);
-                    fd.append('qqpartbyteoffset', i * chunkSize);
-                    fd.append('qqchunksize', chunk.size);
-                    fd.append('qqtotalparts', totalParts);
-                    fd.append('qqtotalfilesize', totalSize);
-                    fd.append('qqfilename', fileName);
-                    fd.append('qqfile', chunk);
-
-                    await fetch('https://www.call2all.co.il/ym/api/UploadFile', { method: 'POST', body: fd });
-                    const pct = Math.round(((i + 1) / totalParts) * 100);
-                    fill.style.width = pct + '%';
-                    mainMsg.innerText = `מעלה לימות: ${pct}%`;
-                    addLog(`חלק ${i+1}/${totalParts} עלה.`);
-                }
-
-                addLog("מבצע פקודת סיום...");
-                const doneUrl = `https://www.call2all.co.il/ym/api/UploadFile?done&token=${config.token}&path=ivr2:KolMevaser/${fileName}&qquuid=${uuid}&qqtotalfilesize=${totalSize}&qqtotalparts=${totalParts}&convertAudio=1`;
-                const fRes = await fetch(doneUrl);
-                const fData = await fRes.json();
-
-                if(fData.status === 'success' || fData.success) {
-                    mainMsg.innerText = "הסתיים בהצלחה!";
-                    const dl = `https://www.call2all.co.il/ym/api/DownloadFile?token=${config.token}&path=ivr2:KolMevaser/${fileName}`;
-                    window.location.href = dl;
+                if(data.status === 'success') {
+                    status.innerHTML = `הקובץ הועבר בהצלחה!<br><a href="https://www.call2all.co.il/ym/api/DownloadFile?token=${conf.token}&path=ivr2:KolMevaser/${fileName}">לחץ כאן להורדה למחשב</a>`;
                 } else {
-                    throw new Error("איחוד הקובץ נכשל בימות");
+                    status.innerText = "שגיאה בימות המשיח: " + (data.message || "לא ידוע");
                 }
             } catch (e) {
-                addLog("שגיאה: " + e.message, true);
-                mainMsg.innerText = "נכשל";
-            } finally {
-                btn.disabled = false;
+                status.innerText = "שגיאה בתקשורת: " + e.message;
             }
         }
     </script>
