@@ -2,52 +2,65 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>הורדה ישירה לימות המשיח</title>
+    <title>העלאה ישירה</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; width: 400px; }
-        input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        button { background: #6366f1; color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
-        #status { margin-top: 20px; font-size: 14px; color: #555; }
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        #status { margin-top: 20px; font-weight: bold; color: #4f46e5; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>העברה לימות המשיח</h2>
-        <input type="text" id="urlInput" placeholder="הדבק לינק מקול מבשר...">
-        <button onclick="transfer()">התחל העברה</button>
+        <h3>העברה לימות המשיח</h3>
+        <input type="text" id="link" placeholder="לינק מקול מבשר" style="width:100%; padding:10px; margin-bottom:10px;">
+        <button onclick="upload()" id="btn" style="width:100%; padding:10px; background:#4f46e5; color:white; border:none; border-radius:5px; cursor:pointer;">בצע העלאה</button>
         <div id="status"></div>
     </div>
 
     <script>
-        async function transfer() {
+        async function upload() {
             const status = document.getElementById('status');
-            const url = document.getElementById('urlInput').value;
-            if(!url) return alert("הזן לינק");
+            const btn = document.getElementById('btn');
+            const link = document.getElementById('link').value;
+            if(!link) return;
 
-            status.innerText = "מתחבר לשרת...";
-            const conf = await (await fetch('/api/get_config')).json();
-            
-            // הכתובת של השרת שלך שמשמש כפרוקסי
-            const proxyUrl = `https://${conf.host}/api/proxy_audio?url=${encodeURIComponent(url)}`;
-            const fileName = `KM_${Math.floor(Date.now()/1000)}.wav`;
+            btn.disabled = true;
+            status.innerText = "מוריד קובץ לזיכרון הדפדפן...";
 
-            status.innerText = "שולח הוראה לימות המשיח למשוך את הקובץ...";
-            
-            // כאן אנחנו אומרים לימות המשיח: תורידו מהפרוקסי שלי
-            const ymApi = `https://www.call2all.co.il/ym/api/UploadFile?token=${conf.token}&url=${encodeURIComponent(proxyUrl)}&path=ivr2:KolMevaser/${fileName}&convertAudio=1`;
-            
             try {
-                const res = await fetch(ymApi);
-                const data = await res.json();
+                // 1. קבלת הטוקן
+                const conf = await (await fetch('/api/get_config')).json();
                 
-                if(data.status === 'success') {
-                    status.innerHTML = `הקובץ הועבר בהצלחה!<br><a href="https://www.call2all.co.il/ym/api/DownloadFile?token=${conf.token}&path=ivr2:KolMevaser/${fileName}">לחץ כאן להורדה למחשב</a>`;
+                // 2. הורדת הקובץ (דרך השרת שלך כדי לעקוף חסימת דפדפן, אבל כ-Blob)
+                // הערה: כאן נטפרי עלול לחסום אם הקובץ ענק. 
+                // אם זה קורה, הפתרון היחיד הוא לבקש מנטפרי אישור לדומיין שלך.
+                const audioRes = await fetch(`/api/stream_audio?url=${encodeURIComponent(link)}`);
+                const blob = await audioRes.blob();
+
+                status.innerText = "מעלה לימות המשיח (לפי התיעוד)...";
+
+                // 3. בניית הטופס בדיוק לפי התיעוד ששלחת
+                const formData = new FormData();
+                formData.append('token', conf.token);
+                formData.append('path', `ivr2:KolMevaser/${Date.now()}.wav`);
+                formData.append('convertAudio', '1');
+                formData.append('qqfile', blob, "audio.mp3"); // הפרמטר שבו נמצא הקובץ
+
+                const ymRes = await fetch('https://www.call2all.co.il/ym/api/UploadFile', {
+                    method: 'POST',
+                    body: formData // שליחה כ-multipart/form-data
+                });
+
+                const result = await ymRes.json();
+                if(result.status === 'success') {
+                    status.innerText = "הצלחנו! הקובץ בימות המשיח.";
                 } else {
-                    status.innerText = "שגיאה בימות המשיח: " + (data.message || "לא ידוע");
+                    status.innerText = "שגיאה מימות: " + result.message;
                 }
             } catch (e) {
-                status.innerText = "שגיאה בתקשורת: " + e.message;
+                status.innerText = "שגיאה: " + e.message;
+            } finally {
+                btn.disabled = false;
             }
         }
     </script>
