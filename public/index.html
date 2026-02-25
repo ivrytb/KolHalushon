@@ -1,42 +1,32 @@
-<!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>הורדת שיעורים למחשב האישי</title>
-    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700;800&display=swap" rel="stylesheet">
-    <style>
-        :root { --p: #6366f1; --s: #10b981; --bg: #f8fafc; }
-        body { font-family: 'Assistant', sans-serif; margin: 0; height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(-45deg, #f1f5f9, #e2e8f0); }
-        .card { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 40px; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); width: 90%; max-width: 450px; text-align: center; border: 1px solid white; }
-        h2 { margin: 0; font-size: 28px; font-weight: 800; color: #1e1b4b; }
-        .sub { margin: 10px 0 30px; color: var(--p); font-weight: 600; }
-        input { width: 100%; padding: 15px; border: 2px solid #e2e8f0; border-radius: 15px; box-sizing: border-box; font-size: 16px; margin-bottom: 20px; transition: 0.3s; }
-        button { background: var(--p); color: white; border: none; padding: 18px; border-radius: 15px; cursor: pointer; width: 100%; font-size: 18px; font-weight: 800; transition: 0.3s; }
-        button:disabled { background: #94a3b8; }
-        #prog-container { display: none; margin-top: 25px; }
-        .bar-bg { background: #e2e8f0; height: 12px; border-radius: 10px; overflow: hidden; margin-bottom: 10px; }
-        .bar-fill { background: var(--p); height: 100%; width: 0%; transition: width 0.3s; }
-        .status-txt { font-size: 14px; font-weight: 700; color: #475569; }
-        .done-card { background: #ecfdf5; color: #065f46; padding: 15px; border-radius: 15px; border: 1px solid #a7f3d0; margin-top: 20px; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h2>הורדת שיעורים למחשב האישי</h2>
-        <div class="sub">עם העתקה למערכת ימות המשיח</div>
-        <input type="text" id="u" placeholder="הדבק לינק לשיעור כאן...">
-        <button id="b" onclick="startDownload()">התחל הורדה</button>
-        <div id="prog-container">
-            <div class="bar-bg"><div id="f" class="bar-fill"></div></div>
-            <div id="s" class="status-txt">מכין קובץ...</div>
-        </div>
-        <div id="d"></div>
-    </div>
+<script>
+    async function startDownload() {
+        // ... (ההתחלה נשארת דומה) ...
+        try {
+            console.log("LOG: Starting process...");
+            // שלב העלאת החלקים
+            for (let i = 0; i < totalParts; i++) {
+                // ... (קוד העלאה) ...
+                const res = await fetch('https://www.call2all.co.il/ym/api/UploadFile', { method: 'POST', body: formData });
+                const resData = await res.json();
+                console.log(`LOG: Chunk ${i} uploaded. Response:`, resData);
+            }
 
-    <script>
-        // קוד מעורבל לניהול העלאה יציבה בחלקים
-        async function startDownload(){const t=document.getElementById('u').value;if(!t)return alert('נא להדביק לינק');const b=document.getElementById('b'),p=document.getElementById('prog-container'),f=document.getElementById('f'),s=document.getElementById('s'),d=document.getElementById('d');b.disabled=!0;p.style.display='block';d.innerHTML='';try{s.innerText='מתחבר למקור (Streaming)...';const c_res=await fetch('/api/get_config'),config=await c_res.json();const res=await fetch(`/api/stream_audio?url=${encodeURIComponent(t)}`);const reader=res.body.getReader();let chunks=[],total=0;while(true){const{done,value}=await reader.read();if(done)break;chunks.push(value);total+=value.length;s.innerText=`טוען לזיכרון: ${(total/1024/1024).toFixed(1)}MB`}const blob=new Blob(chunks),size=blob.size,uuid=self.crypto.randomUUID(),timestamp=Math.floor(Date.now()/1000),fileName=`${timestamp}.wav`,chunkSize=5*1024*1024,totalParts=Math.ceil(size/chunkSize);for(let i=0;i<totalParts;i++){const start=i*chunkSize,end=Math.min(start+chunkSize,size),chunk=blob.slice(start,end),formData=new FormData();formData.append('token',config.token);formData.append('path',`ivr2:KolMevaser/${fileName}`);formData.append('qquuid',uuid);formData.append('qqpartindex',i);formData.append('qqpartbyteoffset',start);formData.append('qqchunksize',chunk.size);formData.append('qqtotalparts',totalParts);formData.append('qqtotalfilesize',size);formData.append('qqfilename',fileName);formData.append('qqfile',chunk);await fetch('https://www.call2all.co.il/ym/api/UploadFile',{method:'POST',body:formData});const pct=Math.round(((i+1)/totalParts)*100);f.style.width=pct+'%';s.innerText=`מעלה לימות המשיח: ${pct}%`}s.innerText='מבצע איחוד והמרה סופית...';const finalRes=await fetch(`https://www.call2all.co.il/ym/api/UploadFile?done&token=${config.token}&path=ivr2:KolMevaser/${fileName}&qquuid=${uuid}&qqtotalfilesize=${size}&qqtotalparts=${totalParts}&convertAudio=1`);const finalData=await finalRes.json();if(finalData.status==='success'||finalData.success===true){const dl=`https://www.call2all.co.il/ym/api/DownloadFile?token=${config.token}&path=ivr2:KolMevaser/${fileName}`;s.innerText='הסתיים בהצלחה!';d.innerHTML=`<div class="done-card">✨ הקובץ מוכן בפורמט WAV!<br><a href="${dl}" download="${fileName}" style="color:#065f46;font-weight:bold;">לחץ כאן להורדה למחשב</a></div>`;const a=document.createElement('a');a.href=dl;a.download=fileName;a.click()}else{throw new Error('איחוד הקובץ נכשל בימות המשיח')}}catch(e){s.innerText='שגיאה: '+e.message;b.disabled=!1}}
-    </script>
-</body>
-</html>
+            // שלב הסיום - כאן הוספתי לוג מפורט
+            console.log("LOG: Sending DONE request...");
+            const finalRes = await fetch(`https://www.call2all.co.il/ym/api/UploadFile?done&token=${config.token}&path=ivr2:KolMevaser/${fileName}&qquuid=${uuid}&qqtotalfilesize=${size}&qqtotalparts=${totalParts}&convertAudio=1`);
+            const finalData = await finalRes.json();
+            
+            console.log("LOG: Final response from Yemot:", finalData);
+
+            if (finalData.status === 'success' || finalData.success === true) {
+                // הצלחה
+            } else {
+                console.error("LOG: Yemot rejected the union. Message:", finalData.message);
+                throw new Error(finalData.message || 'איחוד הקובץ נכשל');
+            }
+        } catch (e) {
+            console.error("LOG: Error caught:", e);
+            s.innerText = 'שגיאה: ' + e.message;
+        }
+    }
+</script>
