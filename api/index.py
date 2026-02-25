@@ -1,49 +1,32 @@
-from flask import Flask, request, jsonify, render_template_string, Response
+from flask import Flask, request, Response, render_template_string, jsonify
 import requests
-import urllib3
 import os
-import sys
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 app = Flask(__name__)
-
-# טוקן מהגדרות ורסל
 YM_TOKEN = os.environ.get('YM_TOKEN')
 
-@app.route('/api/get_config', methods=['GET'])
-def get_config():
-    return jsonify({"token": YM_TOKEN})
-
-@app.route('/api/stream_audio')
-def stream_audio():
+@app.route('/api/proxy_audio')
+def proxy_audio():
     target_url = request.args.get('url')
-    if not target_url:
-        return "Missing URL", 400
-
+    # ה-Headers שקול מבשר דורשים
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0',
         'Referer': 'https://www.yiddish24.com/'
     }
+    
+    def generate():
+        # אנחנו מושכים מקול מבשר ומזרימים לימות המשיח
+        r = requests.get(target_url, headers=headers, stream=True)
+        for chunk in r.iter_content(chunk_size=1024*1024):
+            yield chunk
 
-    try:
-        # הורדה מלאה לזיכרון השרת כדי שנטפרי לא יחסום הזרמה (Streaming)
-        print(f"DEBUG: Downloading {target_url}", file=sys.stderr)
-        res = requests.get(target_url, headers=headers, timeout=120)
-        
-        if res.status_code != 200:
-            return f"Error from source: {res.status_code}", res.status_code
+    return Response(generate(), content_type='audio/mpeg')
 
-        # החזרת הקובץ כקובץ אודיו רגיל
-        return Response(
-            res.content,
-            content_type='audio/mpeg',
-            headers={'Content-Disposition': 'attachment; filename=audio.mp3'}
-        )
-    except Exception as e:
-        print(f"DEBUG ERROR: {str(e)}", file=sys.stderr)
-        return str(e), 500
+@app.route('/api/get_config')
+def get_config():
+    return jsonify({"token": YM_TOKEN, "host": request.host})
 
-@app.route('/', methods=['GET'])
+@app.route('/')
 def home():
     path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'public', 'index.html')
     with open(path, 'r', encoding='utf-8') as f:
