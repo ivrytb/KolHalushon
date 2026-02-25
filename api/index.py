@@ -7,6 +7,7 @@ import sys
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 app = Flask(__name__)
 
+# טוקן מהגדרות ורסל
 YM_TOKEN = os.environ.get('YM_TOKEN')
 
 @app.route('/api/get_config', methods=['GET'])
@@ -17,41 +18,29 @@ def get_config():
 def stream_audio():
     target_url = request.args.get('url')
     if not target_url:
-        return "URL missing", 400
+        return "Missing URL", 400
 
-    # כותרות (Headers) משופרות כדי להיראות כמו דפדפן אמיתי
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.yiddish24.com/',
-        'Accept': '*/*',
-        'Accept-Language': 'en-US,en;q=0.9,he;q=0.8',
-        'Connection': 'keep-alive'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://www.yiddish24.com/'
     }
 
     try:
-        print(f"DEBUG: Attempting to connect to: {target_url}", file=sys.stderr)
+        # הורדה מלאה לזיכרון השרת כדי שנטפרי לא יחסום הזרמה (Streaming)
+        print(f"DEBUG: Downloading {target_url}", file=sys.stderr)
+        res = requests.get(target_url, headers=headers, timeout=120)
         
-        # שימוש ב-Session לשיפור יציבות
-        session = requests.Session()
-        req = session.get(target_url, headers=headers, stream=True, timeout=15, verify=False)
-        
-        print(f"DEBUG: Source status: {req.status_code}", file=sys.stderr)
-        
-        if req.status_code != 200:
-            return f"Source returned error {req.status_code}", req.status_code
+        if res.status_code != 200:
+            return f"Error from source: {res.status_code}", res.status_code
 
-        def generate():
-            try:
-                for chunk in req.iter_content(chunk_size=256 * 1024):
-                    if chunk:
-                        yield chunk
-            except Exception as e:
-                print(f"DEBUG ERROR during stream: {e}", file=sys.stderr)
-
-        return Response(generate(), content_type=req.headers.get('content-type', 'audio/mpeg'))
-
+        # החזרת הקובץ כקובץ אודיו רגיל
+        return Response(
+            res.content,
+            content_type='audio/mpeg',
+            headers={'Content-Disposition': 'attachment; filename=audio.mp3'}
+        )
     except Exception as e:
-        print(f"DEBUG EXCEPTION: {str(e)}", file=sys.stderr)
+        print(f"DEBUG ERROR: {str(e)}", file=sys.stderr)
         return str(e), 500
 
 @app.route('/', methods=['GET'])
